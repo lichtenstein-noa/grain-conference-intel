@@ -485,12 +485,24 @@ button { cursor: pointer; }
 
 .cap-bar-rep {
   flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
   background: var(--bg);
   border: 1px solid var(--line-firm);
-  border-radius: 999px;
-  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
   font-size: 13px;
   color: var(--muted);
+}
+.cap-bar-rep:hover { border-color: var(--accent); }
+.cap-bar-rep-name { font-weight: 600; color: var(--ink); }
+.cap-bar-rep-swap {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-ink);
 }
 
 /* --- The form ------------------------------------------------------------ */

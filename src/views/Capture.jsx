@@ -262,8 +262,11 @@ function ConferenceBar({ conference, confs, onChange, rep, onSwitchRep }) {
           </button>
         )}
       </div>
-      <button className="cap-bar-rep" onClick={onSwitchRep} title="Switch rep">
-        {rep?.name ?? 'Pick rep'}
+      {/* Reads as a control, not a label. It was just the rep's name before,
+          which looked like text and left no visible way back to the picker. */}
+      <button className="cap-bar-rep" onClick={onSwitchRep}>
+        <span className="cap-bar-rep-name">{rep?.name ?? 'Pick rep'}</span>
+        <span className="cap-bar-rep-swap">Change</span>
       </button>
     </div>
   )

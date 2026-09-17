@@ -46,10 +46,8 @@ export default function Plan() {
       const example = exampleDiscovery(events)
       if (example) setFound({ ...example.result, _example: example })
       else setFindError(
-        'Searches the web for conferences within ' +
-        `${MAX_TRIP_DAYS} days and about 1,500 km of this trip, checks each one against a real ` +
-        'page, and offers it for review — so one flight covers more than one event. ' +
-        'Needs an Anthropic API key: add one in Settings.',
+`Finds conferences within ${MAX_TRIP_DAYS} days and 1,500 km of this trip and ` +
+        'checks each against a real page. Needs an Anthropic API key — add one in Settings.',
       )
       return
     }
@@ -166,7 +164,7 @@ export default function Plan() {
         <section className="plan-block">
           <h3 className="plan-h">Nobody is going to these</h3>
           <p className="plan-sub">
-            Tier A events with no rep assigned — the clearest under-investment on the calendar.
+The clearest under-investment on the calendar.
           </p>
           {gaps.map((c) => {
             /* An uncovered event can legitimately also appear under trips, and
@@ -183,8 +181,7 @@ export default function Plan() {
                   <span className="faint"> · {c.city} · {dateLabel(c)} · fit {c.fit}</span>
                   {partner?.length > 0 && (
                     <div className="gap-hint">
-                      Combines with {partner.map((e) => e.name).join(' and ')} — whoever covers
-                      that is already nearby.
+Combines with {partner.map((e) => e.name).join(' and ')} — someone is already nearby.
                     </div>
                   )}
                 </div>
@@ -199,9 +196,8 @@ export default function Plan() {
         <section className="plan-block">
           <h3 className="plan-h">Trips worth combining</h3>
           <p className="plan-sub">
-            Events close enough in time and distance that one journey covers them all — up to{' '}
-            {MAX_TRIP_DAYS} days away, with no more than {MAX_GAP_DAYS} days between stops. Once
-            the flight is paid for, each extra event costs almost nothing.
+Close enough to combine — under {MAX_TRIP_DAYS} days away, {MAX_GAP_DAYS} days
+            between stops. Once the flight is paid for, the next event is nearly free.
           </p>
           {clusters.map((cl) => (
             <div key={cl.id} className="plan-card is-cluster">
@@ -292,7 +288,7 @@ export default function Plan() {
         <section className="plan-block">
           <h3 className="plan-h">Same week, different continents</h3>
           <p className="plan-sub">
-            Worth attending, impossible to combine — these need two people or a decision.
+Worth attending, impossible to combine. Two people, or a decision.
           </p>
           {conflicts.map((g, i) => (
             <div key={i} className="plan-card is-conflict">
@@ -360,8 +356,7 @@ function Discovery({ finding, found, error, onDismiss, onReview }) {
     return (
       <div className="discovery">
         <p className="muted">
-          Searching the web for events near this trip. This can take a while — it checks each
-          candidate against a real page before suggesting it.
+          Searching. Each candidate is checked against a real page, so this takes a while.
         </p>
       </div>
     )
@@ -408,10 +403,9 @@ function Discovery({ finding, found, error, onDismiss, onReview }) {
       </div>
       {found._example && (
         <p className="example-banner">
-          <strong>Saved result</strong> — a real run from{' '}
-          {new Date(found._example.capturedAt).toLocaleDateString()}
-          {found._example.model ? ` using ${found._example.model}` : ''}, shown because no API key
-          is set. Add one in Settings to search live.
+<strong>Saved result</strong> from a real run on{' '}
+          {new Date(found._example.capturedAt).toLocaleDateString()}. Add a key in Settings to
+          search live.
         </p>
       )}
 
@@ -420,14 +414,18 @@ function Discovery({ finding, found, error, onDismiss, onReview }) {
       {found.events.length === 0 ? (
         found.outcome === 'search_failed' ? (
           <p className="addconf-warn">
-            The search didn’t complete — most likely web-search rate limits on this account —
-            so nothing could be checked against a live page. This is <strong>not</strong> a
-            verdict on the trip. Worth trying again in a minute.
+            The search didn’t complete, so nothing was checked. Not a verdict on the trip —
+            try again shortly.
+          </p>
+        ) : found.ruledOut?.length ? (
+          /* Candidates were considered and dropped. Saying "this trip is already
+             the right shape" here would be a claim we did not earn. */
+          <p className="muted" style={{ fontSize: 13.5 }}>
+            Each candidate was checked and none cleared the distance and date limits. Detail below.
           </p>
         ) : (
           <p className="muted" style={{ fontSize: 13.5 }}>
-            No other relevant events found close enough in time and place. That’s a real answer —
-            this trip is already the right shape.
+            Nothing close enough in time and place. This trip is already the right shape.
           </p>
         )
       ) : (

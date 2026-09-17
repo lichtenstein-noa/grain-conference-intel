@@ -29,8 +29,7 @@ export default function Settings({ onClose, onChanged }) {
       </div>
 
       <p className="plan-sub">
-        Keys are stored in this browser only — never in the code, never on our server.
-        Each person using the tool supplies their own.
+Stored in this browser only. Everyone uses their own.
       </p>
 
       <label className="fld fld-wide">
@@ -50,14 +49,11 @@ export default function Settings({ onClose, onChanged }) {
         </p>
       )}
       <p className="settings-hint">
-        Powers event research and trip discovery. Get one at{' '}
+Powers event research. From{' '}
         <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">
           console.anthropic.com
-        </a>
-        {' '}— add credit to the account first, or calls fail with a balance error that looks
-        like a broken integration. The AI features stay visible without a key, using saved
-        example results.
-        {getAnthropicKey() && <> Currently set: <code>{maskKey(getAnthropicKey())}</code>.</>}
+        </a> — add credit first, or calls fail. Without a key you still see saved examples.
+        {getAnthropicKey() && <> Set: <code>{maskKey(getAnthropicKey())}</code>.</>}
       </p>
 
       <div className="fld fld-wide" style={{ marginTop: 18 }}>
@@ -77,11 +73,9 @@ export default function Settings({ onClose, onChanged }) {
         </div>
       </div>
       <p className="settings-hint">
-        {MODELS.find((m) => m.id === model)?.note}. Most of the research job — call a search,
-        read a page, pull out dates and a headcount — sits well within Sonnet. The part that
-        might not is rating who’s in the room, which asks the model to follow a deliberately
-        counterintuitive rule. Worth testing on ITB Berlin: the right answer is travel 5,
-        treasury 1. Each call shows what it cost, so the comparison is measurable.
+{MODELS.find((m) => m.id === model)?.note}. Sonnet handles the research fine; the
+        open question is rating who’s in the room. Test on ITB Berlin — the right answer is
+        travel 5, treasury 1.
       </p>
 
       <label className="fld fld-wide">
@@ -96,8 +90,7 @@ export default function Settings({ onClose, onChanged }) {
         />
       </label>
       <p className="settings-hint">
-        Used to push captured leads into HubSpot. Without it, leads export as a
-        HubSpot-ready file instead.
+Not needed — leads export as a HubSpot import file.
       </p>
 
       <div className="addconf-actions">
@@ -105,13 +98,10 @@ export default function Settings({ onClose, onChanged }) {
       </div>
 
       <p className="settings-note">
-        <strong>Why it works this way.</strong> The app has no backend, so it calls the
-        Anthropic API straight from your browser with the key you paste here. It is stored in
-        this browser’s localStorage and sent only to Anthropic. Deliberately there is no
-        environment variable for it: Vite compiles anything named <code>VITE_*</code> into the
-        JavaScript it ships, so a key set that way would be published to every visitor. In
-        production these calls would route through a small server-side proxy and a rep would
-        never handle a key at all.
+<strong>Why you paste a key at all.</strong> No backend, so calls go straight from
+        your browser to Anthropic. An environment variable would be worse — Vite compiles
+        those into the shipped bundle. In production this would route through a server and a
+        rep would never see a key.
       </p>
     </div>
   )

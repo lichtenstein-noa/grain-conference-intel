@@ -158,19 +158,18 @@ function HubspotExport({ contacts, filterLabel, onClose }) {
       </div>
 
       <p className="plan-sub">
-        Everything currently shown — <strong>{filterLabel}</strong>. {withEmail} have an email
-        address to match on; {readable} carry a relationship read from more than one meeting.
+<strong>{filterLabel}</strong> · {withEmail} with an email to match on · {readable} with
+        a relationship read.
       </p>
 
       <div className="hs-payload">
         <div className="bd-head">What goes with each contact</div>
         <p className="settings-hint">
-          Not just the name — HubSpot can get that from a badge scan. Each row carries the
-          judgement this tool has and HubSpot doesn’t: how many times you’ve met, which
-          direction it’s moving, what changed, and the recommended next step. The verdict maps
-          onto HubSpot’s own <strong>Lead Status</strong>, so a tire-kicker arrives marked
-          <em> Unqualified</em> and someone ready to close arrives as <em>Open deal</em> —
-          filterable and workable the moment it lands, not an inert custom field.
+          Not just names — HubSpot gets those from a badge scan. Each row carries how many
+          times you’ve met, which way it’s moving, and the next step. The verdict maps onto
+          HubSpot’s own <strong>Lead Status</strong>, so someone not buying arrives marked{' '}
+          <em>Unqualified</em> and someone ready arrives as <em>Open deal</em> — workable the
+          moment it lands.
         </p>
       </div>
 
@@ -187,11 +186,9 @@ function HubspotExport({ contacts, filterLabel, onClose }) {
       </div>
 
       <p className="settings-note">
-        <strong>Why a file and not a live push.</strong> HubSpot’s API rejects cross-origin
-        browser requests, and this app has no backend — so a direct push would need server-side
-        code holding a private app token. That’s about thirty lines as a serverless function,
-        and it’s left out rather than shipped untested. A file import is a real path in the
-        meantime: it’s how most teams load a conference list, and it needs no credentials.
+        <strong>Why a file, not a live push.</strong> HubSpot’s API blocks browser requests,
+        and this app has no backend. The server version is ~30 lines, left out rather than
+        shipped untested — and a file import is how most teams load a conference list anyway.
         <br /><br />
         In HubSpot: <strong>Contacts → Import → File from computer</strong>. Email, name,
         company, job title and Lead Status map to built-in properties. The rest need creating

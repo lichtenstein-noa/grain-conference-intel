@@ -40,13 +40,13 @@ const QUESTIONS = [
   {
     col: 'seg_fx_exposed',
     q: 'How many treasury and finance people will actually be in the room?',
-    hint: 'Not "companies with FX exposure" — the finance function itself, attending in person. A travel wholesaler has the exposure, but the person it sends to a travel show is usually commercial, not treasury.',
+    hint: 'The finance function itself, attending in person — not companies that merely have FX exposure. A wholesaler has the exposure; the person it sends to a travel show is rarely treasury.',
     options: PRESENCE,
   },
   {
     col: 'buyer_seniority',
     q: 'Will the people who sign off on an FX decision be there?',
-    hint: 'Senior in the function that buys, not senior in general. A commercial director at a travel show is senior and cannot sign this contract; a founder at a small PSP can.',
+    hint: 'Senior in the function that buys. A commercial director at a travel show cannot sign this; a founder at a small PSP can.',
     options: ['Never', 'Rarely', 'A few', 'Some', 'Many', 'That is who it is for'],
   },
   {
@@ -237,14 +237,11 @@ export default function AddConference({ onSaved, onCancel, seed }) {
         </div>
         <p className="settings-hint">
           {hasAnthropicKey()
-            ? 'Reads the real event page and fills in everything below, including a first guess at who’s in the room. Check it before saving.'
-            : 'Add an Anthropic API key in Settings to fill this in automatically. You can still enter everything by hand.'}
+            ? 'Reads the event page and fills in everything below. Check it before saving.'
+            : 'Add a key in Settings to fill this in automatically, or type it all by hand.'}
         </p>
         {researching && (
-          <p className="settings-hint">
-            Searching the web and reading the event page. This can take a while — it’s reading
-            real pages rather than guessing, so leave it running.
-          </p>
+          <p className="settings-hint">Reading the event page — this takes a while.</p>
         )}
         {aiError && <p className="addconf-warn">{aiError}</p>}
       </div>
@@ -318,9 +315,8 @@ export default function AddConference({ onSaved, onCancel, seed }) {
       {f.city.trim() && !hasCoords && (
         <div className="addconf-warn">
           <p style={{ margin: '0 0 8px' }}>
-            <strong>{f.city}</strong> isn’t one of the cities we have on file. It saves fine —
-            but trip clustering needs coordinates to work out what’s nearby, so add them and
-            this event joins the rest.
+            <strong>{f.city}</strong> isn’t on file. Saves fine, but trip clustering needs
+            coordinates.
           </p>
           <div className="addconf-coords">
             <label className="fld">
@@ -340,10 +336,7 @@ export default function AddConference({ onSaved, onCancel, seed }) {
       {!datesValid && <p className="addconf-warn">The end date is before the start date.</p>}
 
       <h4 className="addconf-sub">Who will be in the room?</h4>
-      <p className="plan-sub">
-        These answers drive the ICP score. Best guesses are fine — they’re editable later,
-        and they get more accurate once you’ve actually worked the event.
-      </p>
+      <p className="plan-sub">These drive the score. Best guesses are fine.</p>
 
       {QUESTIONS.map((q) => (
         <Scale
@@ -373,8 +366,8 @@ export default function AddConference({ onSaved, onCancel, seed }) {
         <input type="checkbox" checked={f.verified}
                onChange={(e) => set({ verified: e.target.checked })} />
         <span>
-          I checked these dates on the organiser’s own site.
-          <span className="faint"> Otherwise it’s flagged as unverified, so nobody books a flight against a guess.</span>
+          I checked these dates on the organiser’s site.
+          <span className="faint"> Otherwise it’s flagged unverified.</span>
         </span>
       </label>
 
@@ -419,8 +412,7 @@ function DraftNote({ draft }) {
 
       {draft.dates_confidence !== 'high' && (
         <p className="draftnote-warn">
-          Dates read as <strong>{draft.dates_confidence} confidence</strong> — check them on the
-          organiser’s own page before anyone books.
+Dates read as <strong>{draft.dates_confidence} confidence</strong> — check before anyone books.
         </p>
       )}
 
@@ -430,9 +422,7 @@ function DraftNote({ draft }) {
         {r.attendance && <><dt>Attendance figure</dt><dd>{r.attendance}</dd></>}
       </dl>
 
-      <p className="draftnote-foot">
-        Every field below is editable. Nothing is saved until you press Add.
-      </p>
+      <p className="draftnote-foot">All editable. Nothing saves until you press Add.</p>
     </div>
   )
 }
