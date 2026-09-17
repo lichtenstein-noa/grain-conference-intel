@@ -211,18 +211,6 @@ const CandidateList = z.object({
   reasoning: z.string().describe('One sentence on how you chose.'),
 })
 
-const DiscoveryResult = z.object({
-  events: z.array(EventDraft).max(3),
-  searched: z.string().describe('One sentence on what you looked for and where.'),
-  /* An empty list has two very different meanings and the UI must not conflate
-   * them. "I searched properly and this trip is already the right shape" is a
-   * useful answer. "My searches failed so I could not verify anything" is a
-   * tooling problem wearing the same clothes - and telling a rep their plan is
-   * optimal when the search never ran is worse than showing an error. */
-  outcome: z.enum(['searched_ok', 'search_failed'])
-    .describe('search_failed if rate limits, fetch errors or blocked pages stopped you verifying candidates properly'),
-})
-
 function client() {
   const apiKey = getAnthropicKey()
   if (!apiKey) throw new Error('No Anthropic API key set. Add one in Settings.')
@@ -325,7 +313,7 @@ export async function researchEvent(input, { targetWindow = null } = {}) {
 ${SEQUENTIAL}`,
     prompt: isUrl
       ? `Research this conference and fill in every field.\n\nURL: ${input.trim()}\n\nFetch that page. If it lacks dates, venue or attendance, search for the official site and this year's edition. Report what you actually read, and set dates_confidence honestly.` + edition
-      : `Research the conference called "${input.trim()}" and fill in every field. Find its official site and the NEXT upcoming edition — not a past one. If several events share this name, pick the largest and say which in the notes.` + edition,
+      : `Research the conference called "${input.trim()}" and fill in every field. Find its official site and ${targetWindow ? 'the relevant edition' : 'the NEXT upcoming edition — not a past one'}. If several events share this name, pick the largest and say which in the notes.` + edition,
   })
 }
 
@@ -342,6 +330,18 @@ export async function discoverNearTrip({ events, existingNames, radiusKm = 1500,
   const anchor = events
     .map((e) => `- ${e.name}, ${e.city} (${e.country}), ${e.start_date} to ${e.end_date}`)
     .join('\n')
+
+  /* The window the geometry check will actually enforce, computed once and
+   * stated to both steps. Recall used to be told "around the same time of year"
+   * and offered February events for a March trip; verification used to look for
+   * "the next upcoming edition" and returned FinovateEurope 2026 while checking
+   * a 2027 trip. Both wasted a verification call learning what the calendar
+   * already knew. */
+  const starts = events.map((e) => e.start_date).sort()
+  const ends = events.map((e) => e.end_date).sort()
+  const windowStart = shiftIso(starts[0], -windowDays)
+  const windowEnd = shiftIso(ends[ends.length - 1], windowDays)
+  const targetWindow = `${windowStart} to ${windowEnd}`
 
   /* STEP 1 - recall. No tools, so this returns in a few seconds.
    *
