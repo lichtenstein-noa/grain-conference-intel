@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { getAnthropicKey, getModel, PRICING } from './settings.js'
+import { distanceKm } from './planning.js'
 
 /* ---------------------------------------------------------------------------
    Grounded event research.
@@ -51,7 +52,10 @@ const RESEARCH_TOOLS = [
   {
     type: 'web_fetch_20260209',
     name: 'web_fetch',
-    max_uses: 2,
+    // Enough to verify what we actually ask for. The first version wanted up to
+    // four verified events while allowing two fetches - a contradiction the
+    // model burned its whole turn budget failing to satisfy.
+    max_uses: 4,
     // The single most important number here. Dates, venue, attendance and
     // audience mix all live near the top of an event page; the other 40k tokens
     // are a speaker grid we pay to read and never use.
@@ -59,27 +63,39 @@ const RESEARCH_TOOLS = [
   },
 ]
 
-/* Fact-gathering, not hard reasoning. `high` is the default and buys
- * deliberation this task does not need, charged in thinking tokens. */
-const EFFORT = 'low'
+/* `high` is the default and buys deliberation this does not need. But `low` was
+ * a false economy on the multi-step discovery path: too little planning means
+ * badly-chosen searches, which means more of them, which costs more than the
+ * thinking would have. Medium plans once and searches well. */
+const EFFORT = 'medium'
 
-/* Firing several searches at once trips the per-account search rate limit on a
- * new or low-tier account. The failure mode is nasty: the model cannot verify
- * anything against a live page, correctly refuses to list events from memory,
- * and returns an empty result - so a rate limit looks exactly like "nothing
- * found". The API flag for serialising tool calls is unavailable here (see the
- * note at the request), so it is asked for directly. */
+/* Search strategy, rather than a blanket "go slowly".
+ *
+ * Firing many searches at once trips the per-account rate limit on a new
+ * account, and the failure mode is nasty: nothing can be verified, the model
+ * correctly refuses to invent events, and an empty result comes back - so a
+ * rate limit looks exactly like "found nothing". The first fix ordered strictly
+ * one-at-a-time searching, which avoided the limit and took six minutes.
+ * Naming the query shape is better: well-aimed searches need fewer attempts. */
 const SEQUENTIAL = `
-Pace your searches. Run ONE web_search at a time and read its results before
-starting another - never issue several searches at once. Parallel searches trip
-a rate limit, and a rate-limited search cannot verify anything, which produces a
-misleadingly empty answer. Fewer, better-targeted searches beat many scattered
-ones.
+Search deliberately, not broadly. Plan queries before you start and name the
+country and month: "payments conference Germany March 2027", "treasury event
+Netherlands June 2027". A few well-aimed searches beat many scattered ones, and
+firing several at once trips a rate limit.
+
+Stop as soon as you have what was asked for. You do not have to spend your full
+search budget.
 `.trim()
 
 /* Each extra turn re-bills everything read so far. Two searches and a fetch
  * should finish inside three. */
 const MAX_TURNS = 3
+
+/* Per-turn wall clock. Nobody watches a spinner longer than this, and a request
+ * still running past it is wandering rather than working. The SDK's own default
+ * is ten minutes, which is far too patient for something a person is sat
+ * watching. */
+const TURN_TIMEOUT_MS = 90_000
 
 /** Approximate spend for one call, so cost is visible rather than a surprise. */
 function estimateCost(usage, model) {
@@ -108,6 +124,9 @@ function friendlyError(err) {
   }
   if (/overloaded|\b529\b|\b50\d\b/.test(raw)) {
     return 'The API is busy right now. Try again in a minute.'
+  }
+  if (/timeout|timed out|aborted/i.test(raw)) {
+    return 'That search ran too long and was stopped. Open-ended discovery is slow and unreliable on a low-tier API account — looking a single event up by URL is much faster.'
   }
   return raw
 }
@@ -177,8 +196,23 @@ const EventDraft = z.object({
     .describe('low if the page was stale, ambiguous, or the dates came from a third-party listing'),
 })
 
+/* Step one of discovery: candidate names only, from memory, with no tools.
+ *
+ * Deliberately unverified. Recalling "MPE and ITB are both in Berlin in March"
+ * takes seconds and costs almost nothing; the dates that come with that recall
+ * are worthless and we throw them away. Verification happens in step two,
+ * against the live web. Anything imagined simply fails to verify. */
+const CandidateList = z.object({
+  candidates: z.array(z.object({
+    name: z.string().describe('Event name as it is actually known'),
+    city: z.string().describe('Where you believe it runs'),
+    why: z.string().describe('One line: why this fits Grain and this trip'),
+  })).max(5),
+  reasoning: z.string().describe('One sentence on how you chose.'),
+})
+
 const DiscoveryResult = z.object({
-  events: z.array(EventDraft).max(6),
+  events: z.array(EventDraft).max(3),
   searched: z.string().describe('One sentence on what you looked for and where.'),
   /* An empty list has two very different meanings and the UI must not conflate
    * them. "I searched properly and this trip is already the right shape" is a
@@ -205,7 +239,7 @@ function client() {
  * truncated answer rather than an error - so the loop below pushes the paused
  * turn back and continues.
  */
-async function research({ schema, system, prompt }) {
+async function research({ schema, system, prompt, tools = RESEARCH_TOOLS }) {
   const anthropic = client()
   const model = getModel()
   const messages = [{ role: 'user', content: prompt }]
@@ -213,11 +247,22 @@ async function research({ schema, system, prompt }) {
 
   try {
     for (let turn = 0; turn < MAX_TURNS; turn++) {
+      /* A hard wall-clock limit.
+       *
+       * Single-event research finishes in under a minute. Open-ended discovery
+       * can wander: the model keeps searching, refining and re-searching, and
+       * with no ceiling it simply runs - eight minutes observed, on a task worth
+       * about ninety seconds. The SDK's own default is ten minutes, which is far
+       * too patient for anything a person is sitting and watching.
+       *
+       * Failing fast and saying so beats a spinner that might finish. */
       const response = await anthropic.messages.parse({
         model,
         max_tokens: 8000,
         system,
-        tools: RESEARCH_TOOLS,
+        // Omitted entirely when empty - the recall step runs with no tools at
+        // all, and an empty array is not the same thing as absent.
+        ...(tools.length ? { tools } : {}),
         /* NOTE: tool_choice.disable_parallel_tool_use is rejected here with a
          * 400. The _20260209 search and fetch tools run code execution under the
          * hood for dynamic filtering, which counts as programmatic tool calling,
@@ -225,7 +270,7 @@ async function research({ schema, system, prompt }) {
          * prompt instead - see SEQUENTIAL below. */
         messages,
         output_config: { format: zodOutputFormat(schema), effort: EFFORT },
-      })
+      }, { timeout: TURN_TIMEOUT_MS })
 
       // Accumulate across turns - a resumed turn is billed again in full.
       const turnCost = estimateCost(response.usage, model)
@@ -259,16 +304,28 @@ async function research({ schema, system, prompt }) {
 }
 
 /** "Here is an event — fill in the form." Accepts a URL or just a name. */
-export async function researchEvent(input) {
+export async function researchEvent(input, { targetWindow = null } = {}) {
   const isUrl = /^https?:\/\//i.test(input.trim())
+
+  /* Which EDITION to look up.
+   *
+   * "The next upcoming one" is right when someone is adding an event they know
+   * about. It is wrong when verifying a discovery candidate, where we care about
+   * the edition near a specific trip - the first version dutifully returned
+   * FinovateEurope 2026 while checking a March 2027 trip, then failed its own
+   * date check. */
+  const edition = targetWindow
+    ? `\n\nIMPORTANT: find the edition running closest to ${targetWindow}, NOT simply the next upcoming one. If no edition runs near then, say so in the notes and give the nearest edition you can confirm.`
+    : ''
+
   return research({
     schema: EventDraft,
     system: `You research business conferences for a sales team and return structured facts.\n\n${RUBRIC}\n\nAlways use web_search and web_fetch to read the real event page. Never answer from memory: conference dates change every year and a recalled date is a wrong date.
 
 ${SEQUENTIAL}`,
     prompt: isUrl
-      ? `Research this conference and fill in every field.\n\nURL: ${input.trim()}\n\nFetch that page. If it lacks dates, venue or attendance, search for the official site and this year's edition. Report what you actually read, and set dates_confidence honestly.`
-      : `Research the conference called "${input.trim()}" and fill in every field. Find its official site and the NEXT upcoming edition — not a past one. If several events share this name, pick the largest and say which in the notes.`,
+      ? `Research this conference and fill in every field.\n\nURL: ${input.trim()}\n\nFetch that page. If it lacks dates, venue or attendance, search for the official site and this year's edition. Report what you actually read, and set dates_confidence honestly.` + edition
+      : `Research the conference called "${input.trim()}" and fill in every field. Find its official site and the NEXT upcoming edition — not a past one. If several events share this name, pick the largest and say which in the notes.` + edition,
   })
 }
 
@@ -286,18 +343,151 @@ export async function discoverNearTrip({ events, existingNames, radiusKm = 1500,
     .map((e) => `- ${e.name}, ${e.city} (${e.country}), ${e.start_date} to ${e.end_date}`)
     .join('\n')
 
-  return research({
-    schema: DiscoveryResult,
-    system: `You find business conferences a sales team does not already know about.\n\n${RUBRIC}\n\nAlways use web_search and web_fetch. Never list an event from memory — verify each one exists on a real page with real dates, and give the URL you read it from. It is far better to return two verified events than six plausible ones.
+  /* STEP 1 - recall. No tools, so this returns in a few seconds.
+   *
+   * Earlier versions asked one call to both find AND verify candidates, and it
+   * wandered for eight minutes: search, evaluate, refine, search again. The two
+   * halves want opposite things. Finding is open-ended and does not need to be
+   * right. Verifying is narrow and has to be exactly right. Split apart, each
+   * half is easy. */
+  const recalled = await research({
+    schema: CandidateList,
+    tools: [],
+    system:
+      `You know the international business conference circuit well.
 
-${SEQUENTIAL}`,
+${RUBRIC}
+
+` +
+      `Name events from memory. Do NOT worry about exact dates - they will be checked ` +
+      `against the organiser's own site afterwards, and anything you misremember is dropped ` +
+      `then. Your job is only to think of the right candidates.`,
     prompt:
-      `A Grain rep is already travelling for:\n\n${anchor}\n\n` +
-      `Find up to 4 OTHER conferences that could be added to this same trip: within about ${radiusKm} km ` +
-      `and starting within ${windowDays} days before or after, so one journey covers both.\n\n` +
-      `Prioritise events where Grain's buyers actually are — payments, cross-border, treasury, travel trade. ` +
-      `A small, dense event beats a big irrelevant one.\n\n` +
-      `Already on our calendar, do NOT return these:\n${existingNames.join(', ')}\n\n` +
-      `If nothing genuinely qualifies, return an empty list. An empty answer is useful; a padded one is not.`,
+      `A Grain rep is already travelling for:
+
+${anchor}
+
+` +
+      `Which other conferences run in or near that COUNTRY AND REGION, starting between ` +
+      `${windowStart} and ${windowEnd}, that Grain's buyers attend - payments, cross-border, ` +
+      `treasury, or travel trade?
+
+The date window is strict: an event that normally runs ` +
+      `in a different month does not qualify, however relevant it is otherwise. Think about ` +
+      `which month each event you name actually runs in before suggesting it.
+
+` +
+      `Think about the country and the surrounding region, not just the exact city. Name up ` +
+      `to 5. A small dense event beats a big irrelevant one.
+
+` +
+      `Already on our calendar, do not suggest these:
+${existingNames.join(', ')}`,
   })
+
+  const seen = new Set(existingNames.map((n) => n.toLowerCase()))
+  const shortlist = (recalled.candidates || [])
+    .filter((c) => !seen.has(c.name.toLowerCase()))
+    .slice(0, 2)
+
+  /* STEP 2 - verify each candidate through the single-event path that already
+   * works reliably, because it is given a specific target rather than an
+   * open question. One failure does not sink the batch. */
+  const verified = []
+  const ruledOut = []
+  for (const c of shortlist) {
+    try {
+      const draft = await researchEvent(`${c.name} ${c.city}`.trim(), { targetWindow })
+      verified.push(draft)
+    } catch (err) {
+      // Could not be confirmed at all - still reported, so the rep sees what was
+      // considered rather than only what survived.
+      ruledOut.push({ name: c.name, detail: c.city, why: `could not verify: ${err.message}` })
+    }
+  }
+
+  /* STEP 3 - proximity, checked in CODE rather than trusted to the model.
+   *
+   * We have real coordinates and real dates by now, so "is this actually near
+   * that trip" is arithmetic. Asking a model to respect a 1,500 km radius is
+   * asking it to do geometry in its head; this way a confidently-wrong answer
+   * simply fails the check.
+   *
+   * Anything ruled out is kept, with the measurement that ruled it out and a
+   * link. A rep should be able to disagree with a rejection - "too far away,
+   * trust me" is exactly the kind of claim this tool should not be making. */
+  const near = []
+  for (const d of verified) {
+    let bestKm = null
+    let bestGap = null
+
+    for (const e of events) {
+      const km = distanceKm(e, { latitude: d.latitude, longitude: d.longitude, city: d.city })
+      const gap = Math.min(
+        Math.abs(daysBetweenIso(e.end_date, d.start_date)),
+        Math.abs(daysBetweenIso(d.end_date, e.start_date)),
+      )
+      if (bestKm === null || (km !== null && km < bestKm)) bestKm = km
+      if (bestGap === null || gap < bestGap) bestGap = gap
+    }
+
+    const fitsDistance = bestKm !== null && bestKm <= radiusKm
+    const fitsDates = bestGap !== null && bestGap <= windowDays
+
+    if (fitsDistance && fitsDates) {
+      near.push({ ...d, _km: bestKm, _gap: bestGap })
+    } else {
+      const why = []
+      if (!fitsDistance) {
+        why.push(bestKm === null
+          ? 'no location we could place'
+          : `${bestKm.toLocaleString()} km away, over the ${radiusKm.toLocaleString()} km limit`)
+      }
+      if (!fitsDates) why.push(`${bestGap} days from the trip, over the ${windowDays}-day window`)
+      ruledOut.push({
+        name: d.name,
+        detail: `${d.city} · ${d.start_date} to ${d.end_date}`,
+        why: why.join('; '),
+        website: d.website || null,
+        source_url: d.source_url || null,
+      })
+    }
+  }
+
+  return {
+    events: near,
+    ruledOut,
+    outcome: 'searched_ok',
+    searched: `${recalled.reasoning} Checked ${shortlist.length} candidate${shortlist.length === 1 ? '' : 's'} against their own event pages.`,
+    _spend: mergeSpend([recalled, ...verified]),
+  }
+}
+
+/** Shift a YYYY-MM-DD string by N days, staying in local time. */
+function shiftIso(iso, days) {
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(y, m - 1, d + days)
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+}
+
+/** Whole days between two YYYY-MM-DD strings. */
+function daysBetweenIso(a, b) {
+  const [y1, m1, d1] = a.split('-').map(Number)
+  const [y2, m2, d2] = b.split('-').map(Number)
+  return Math.round((new Date(y2, m2 - 1, d2) - new Date(y1, m1 - 1, d1)) / 86400000)
+}
+
+/** Discovery makes several calls; report what the whole thing cost, not a leg. */
+function mergeSpend(results) {
+  const total = { inputTokens: 0, outputTokens: 0, usd: 0, turns: 0 }
+  for (const r of results) {
+    const sp = r?._spend
+    if (!sp) continue
+    total.inputTokens += sp.inputTokens
+    total.outputTokens += sp.outputTokens
+    total.usd += sp.usd
+    total.turns += sp.turns
+    total.model = sp.model
+  }
+  return total
 }

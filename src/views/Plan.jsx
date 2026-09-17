@@ -379,7 +379,13 @@ function Discovery({ finding, found, error, onDismiss, onReview }) {
   return (
     <div className="discovery">
       <div className="discovery-head">
-        <strong>{found.events.length ? `${found.events.length} possible additions` : 'Nothing worth adding'}</strong>
+        <strong>
+          {found.events.length
+            ? `${found.events.length} possible addition${found.events.length === 1 ? '' : 's'}`
+            : found.ruledOut?.length
+              ? 'Nothing qualified'
+              : 'Nothing worth adding'}
+        </strong>
         <span className="discovery-meta">
           {found._spend && <span className="spend">~${found._spend.usd.toFixed(3)}</span>}
           {/* Captures a genuine run so it can be shipped as the keyless example.
@@ -436,10 +442,21 @@ function Discovery({ finding, found, error, onDismiss, onReview }) {
             </div>
             {e.notes && <p className="disc-notes">{e.notes}</p>}
             <div className="disc-foot">
-              {e.source_url && (
-                <a href={e.source_url} target="_blank" rel="noreferrer">
-                  Check the source ↗
+              {/* The event's own site first - that is what a rep wants to open.
+                  The source is where these facts were actually read, which may
+                  be a listing rather than the organiser, so it is shown too. */}
+              {e.website && (
+                <a href={e.website} target="_blank" rel="noreferrer">Event site ↗</a>
+              )}
+              {e.source_url && e.source_url !== e.website && (
+                <a href={e.source_url} target="_blank" rel="noreferrer" className="faint">
+                  source ↗
                 </a>
+              )}
+              {e._km != null && (
+                <span className="faint">
+                  {e._km === 0 ? 'same city' : `${e._km.toLocaleString()} km`} · {e._gap} days apart
+                </span>
               )}
               {e.dates_confidence !== 'high' && (
                 <span className="disc-flag">dates {e.dates_confidence} confidence</span>
@@ -448,6 +465,28 @@ function Discovery({ finding, found, error, onDismiss, onReview }) {
             </div>
           </div>
         ))
+      )}
+
+      {/* What was considered and dropped, with the measurement that dropped it.
+          "Too far away, trust me" is the kind of claim this tool should not be
+          making - a rep can click through and disagree. */}
+      {found.ruledOut?.length > 0 && (
+        <div className="disc-ruled">
+          <div className="bd-head">Checked and ruled out</div>
+          <ul>
+            {found.ruledOut.map((r) => (
+              <li key={r.name}>
+                {r.website || r.source_url ? (
+                  <a href={r.website || r.source_url} target="_blank" rel="noreferrer">{r.name}</a>
+                ) : (
+                  <strong>{r.name}</strong>
+                )}
+                {r.detail && <span className="faint"> · {r.detail}</span>}
+                <div className="disc-ruled-why">{r.why}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   )

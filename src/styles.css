@@ -1493,3 +1493,22 @@ button { cursor: pointer; }
   margin-top: 14px;
 }
 .hs-payload .settings-hint { margin-top: 4px; }
+
+/* Search sits above the rep grid on the capture entry screen */
+.cap-reppick .cap-input { margin-bottom: 10px; }
+
+/* Candidates considered and dropped, each with the measurement that dropped it */
+.disc-ruled {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.disc-ruled ul { list-style: none; margin: 6px 0 0; padding: 0; }
+.disc-ruled li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.disc-ruled li:last-child { border-bottom: none; }
+.disc-ruled a { color: var(--accent-ink); font-weight: 500; }
+.disc-ruled-why { font-size: 12.5px; color: var(--muted); margin-top: 2px; }

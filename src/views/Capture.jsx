@@ -353,19 +353,51 @@ function MatchPrompt({ typed, candidates, saving, onSame, onNew, onCancel }) {
   )
 }
 
+/* Who is using this device.
+ *
+ * A plain grid of everyone works at four people and becomes a scroll at twenty -
+ * and this is the very first screen a rep sees, on a phone, usually in a hurry.
+ * Search is always visible rather than appearing once the team grows, because a
+ * control that shows up only sometimes is one nobody learns to reach for. */
 function RepPicker({ reps, onPick }) {
+  const [q, setQ] = useState('')
+
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase()
+    const list = needle
+      ? reps.filter((r) => `${r.name} ${r.home_city ?? ''}`.toLowerCase().includes(needle))
+      : reps
+    return [...list].sort((a, b) => a.name.localeCompare(b.name))
+  }, [reps, q])
+
   return (
     <div className="cap-reppick">
       <h2>Who's capturing?</h2>
       <p className="muted">Picked once, remembered on this device.</p>
+
+      <input
+        className="cap-input"
+        type="search"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder={`Find your name… (${reps.length})`}
+        autoComplete="off"
+      />
+
       <div className="cap-repgrid">
-        {reps.map((r) => (
+        {filtered.map((r) => (
           <button key={r.id} className="cap-repbtn" onClick={() => onPick(r.id)}>
             <strong>{r.name}</strong>
             <span className="faint">{r.home_city}</span>
           </button>
         ))}
       </div>
+
+      {filtered.length === 0 && (
+        <p className="muted" style={{ marginTop: 12 }}>
+          Nobody matches “{q.trim()}”.
+        </p>
+      )}
     </div>
   )
 }
