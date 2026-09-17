@@ -1264,7 +1264,6 @@ button { cursor: pointer; }
 
 /* --- Settings ------------------------------------------------------------- */
 .settings-btn {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -1284,13 +1283,34 @@ button { cursor: pointer; }
 }
 .keydot.is-on { background: var(--tier-a); }
 
+/* Anchored to its button in the sticky header, so it opens where the click was
+   rather than at the top of a page you may have scrolled away from. */
+.settings-anchor { position: relative; margin-left: auto; }
+
 .settings {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 60;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--line-firm);
   border-radius: var(--radius);
-  padding: 18px;
-  margin-bottom: 18px;
+  box-shadow: 0 10px 34px rgba(26, 31, 54, 0.18);
+  padding: 16px;
+}
+
+/* The HubSpot export reuses .settings as a plain inline card, not a popover. */
+.settings.is-inline {
+  position: static;
+  width: auto;
   max-width: 720px;
+  max-height: none;
+  box-shadow: none;
+  margin-bottom: 18px;
 }
 .settings-head {
   display: flex;

@@ -151,7 +151,7 @@ function HubspotExport({ contacts, filterLabel, onClose }) {
   const readable = contacts.filter((c) => c.encounters.length > 1).length
 
   return (
-    <div className="settings" style={{ marginBottom: 18 }}>
+    <div className="settings is-inline">
       <div className="settings-head">
         <h3>Send {contacts.length} contacts to HubSpot</h3>
         <button className="match-cancel" onClick={onClose}>Close</button>
