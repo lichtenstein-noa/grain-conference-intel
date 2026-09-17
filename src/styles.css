@@ -1546,3 +1546,20 @@ button { cursor: pointer; }
 .disc-ruled li:last-child { border-bottom: none; }
 .disc-ruled a { color: var(--accent-ink); font-weight: 500; }
 .disc-ruled-why { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+/* "Nearby?" sits on covered events in the year view - the flight is already
+   paid for, so the marginal cost of a second event is nearly nothing. */
+.chip-nearby {
+  flex: none;
+  white-space: nowrap;
+  border-style: dashed;
+}
+.chip-nearby:hover:not(:disabled) {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.chip-nearby:disabled { opacity: 0.5; cursor: default; }
+
+.month-row + .discovery { margin: 0 0 10px; padding: 10px 12px; background: var(--surface);
+  border: 1px solid var(--line); border-top: none; border-radius: 0 0 var(--radius) var(--radius); }

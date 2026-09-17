@@ -249,7 +249,7 @@ Within {MAX_TRIP_DAYS} days, no more than {MAX_GAP_DAYS} days between stops.
                     {/* Only promise an example when one actually exists for this
                         trip, otherwise the label offers something the click
                         cannot deliver. */}
-                    {finding && anchor?.[0]?.id === cl.events[0].id
+                    {finding && anchor?.length === cl.events.length && anchor[0]?.id === cl.events[0].id
                       ? 'Searching…'
                       : !hasAnthropicKey() && exampleDiscovery(cl.events)
                         ? 'What else is nearby? (example)'
@@ -269,7 +269,11 @@ Within {MAX_TRIP_DAYS} days, no more than {MAX_GAP_DAYS} days between stops.
                 </div>
               </div>
 
-              {anchor?.[0]?.id === cl.events[0].id && (finding || found || findError) && (
+              {/* Match the whole trip, not just its first event - a single-event
+                  anchor can share a first id with a cluster. */}
+              {anchor?.length === cl.events.length &&
+                anchor.every((e, i) => e.id === cl.events[i].id) &&
+                (finding || found || findError) && (
                 <Discovery
                   finding={finding}
                   found={found}
@@ -311,7 +315,10 @@ Overlapping dates, too far apart to combine.
 
       <section className="plan-block">
         <h3 className="plan-h">The year</h3>
-        <p className="plan-sub">Tap a rep to assign or unassign them.</p>
+        <p className="plan-sub">
+          Tap a rep to assign or unassign. Where someone is already going, ask what else that
+          trip could cover.
+        </p>
         {months.map(({ key, events }) => {
           const [y, m] = key.split('-')
           return (
@@ -320,20 +327,51 @@ Overlapping dates, too far apart to combine.
                 {MONTH_NAMES[Number(m) - 1]} <span className="faint">{y}</span>
               </div>
               <div className="month-events">
-                {events.map((c) => (
-                  <div key={c.id} className={`month-row tierline-${c.tier}`}>
-                    <span className={`tier tier-${c.tier}`}>{c.tier}</span>
-                    <span className="month-name">
-                      <strong>{c.name}</strong>
-                      <span className="faint"> · {c.city} · {dateLabel(c)}</span>
-                    </span>
-                    <RepAssign
-                      reps={reps}
-                      assigned={byConf[c.id] || []}
-                      onToggle={(rid) => toggle(c.id, rid)}
-                    />
-                  </div>
-                ))}
+                {events.map((c) => {
+                  /* Offered only where someone is already booked. The whole
+                   * premise is that the flight is paid for - asking "what else
+                   * is near this?" about an event nobody is attending is a
+                   * different, much weaker question. */
+                  const covered = (byConf[c.id] || []).length > 0
+                  const isAnchor = anchor?.length === 1 && anchor[0].id === c.id
+
+                  return (
+                    <div key={c.id}>
+                      <div className={`month-row tierline-${c.tier}`}>
+                        <span className={`tier tier-${c.tier}`}>{c.tier}</span>
+                        <span className="month-name">
+                          <strong>{c.name}</strong>
+                          <span className="faint"> · {c.city} · {dateLabel(c)}</span>
+                        </span>
+                        {covered && (
+                          <button
+                            className="chip chip-nearby"
+                            disabled={finding}
+                            onClick={() => findNearby([c])}
+                            title="Find other events this trip could cover"
+                          >
+                            {finding && isAnchor ? 'Searching…' : 'Nearby?'}
+                          </button>
+                        )}
+                        <RepAssign
+                          reps={reps}
+                          assigned={byConf[c.id] || []}
+                          onToggle={(rid) => toggle(c.id, rid)}
+                        />
+                      </div>
+
+                      {isAnchor && (finding || found || findError) && (
+                        <Discovery
+                          finding={finding}
+                          found={found}
+                          error={findError}
+                          onDismiss={() => { setAnchor(null); setFound(null); setFindError(null) }}
+                          onReview={setReviewing}
+                        />
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )
