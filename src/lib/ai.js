@@ -166,16 +166,63 @@ est_attendance: use the organiser's published figure, but note in the reasoning
 if it looks like a marketing number (it usually includes exhibitor staff).
 `.trim()
 
+/* Coerce a model's free text onto the values the database accepts.
+ *
+ * Structured output guarantees a string, not that the string is one we know -
+ * and rejecting the whole draft because a region came back as "Europe" rather
+ * than "EMEA" wastes a paid call over a synonym. */
+/* Word boundaries matter here. A bare /na/ matches inside "Ghana", which would
+ * quietly file a Nairobi event under North America. */
+const REGION_HINTS = [
+  ['LATAM', /latin|latam|south america|central america|brazil|mexico|argentina|chile|colombia/i],
+  ['APAC',  /apac|asia|pacific|oceania|australia|japan|china|singapore|india|korea/i],
+  ['EMEA',  /emea|europe|middle east|africa|united kingdom|gulf|\buk\b|\beu\b/i],
+  ['NA',    /north america|\bna\b|\busa\b|\bu\.s\b|united states|america|canada/i],
+]
+
+const COUNTRY_REGION = {
+  usa: 'NA', 'united states': 'NA', canada: 'NA', mexico: 'LATAM', brazil: 'LATAM',
+  singapore: 'APAC', thailand: 'APAC', japan: 'APAC', china: 'APAC', india: 'APAC',
+  australia: 'APAC', 'hong kong': 'APAC', malaysia: 'APAC', indonesia: 'APAC',
+  'south korea': 'APAC',
+}
+
+export function normaliseRegion(value, country) {
+  const v = String(value || '').trim()
+  if (['NA', 'EMEA', 'APAC', 'LATAM'].includes(v.toUpperCase())) return v.toUpperCase()
+  for (const [code, rx] of REGION_HINTS) if (rx.test(v)) return code
+  const byCountry = COUNTRY_REGION[String(country || '').trim().toLowerCase()]
+  if (byCountry) return byCountry
+  return 'EMEA' // most of the calendar; a wrong guess here only affects a filter
+}
+
+const VERTICALS = ['payments', 'treasury', 'travel', 'fintech', 'banking', 'fx', 'saas']
+
+export function normaliseVertical(value) {
+  const v = String(value || '').trim().toLowerCase()
+  if (VERTICALS.includes(v)) return v
+  if (/pay|acquir|merchant|card/.test(v)) return 'payments'
+  if (/treasur|cfo|finance/.test(v)) return 'treasury'
+  if (/travel|tourism|hospitality/.test(v)) return 'travel'
+  if (/bank/.test(v)) return 'banking'
+  if (v === 'fx' || /currency|forex|foreign exchange/.test(v)) return 'fx'
+  if (/saas|software|tech/.test(v)) return 'saas'
+  return 'fintech'
+}
+
 const EventDraft = z.object({
   name: z.string().describe('Official event name'),
   start_date: z.string().describe('YYYY-MM-DD'),
   end_date: z.string().describe('YYYY-MM-DD'),
   city: z.string(),
   country: z.string(),
-  region: z.enum(['NA', 'EMEA', 'APAC', 'LATAM']),
+  /* String, not an enum, on purpose. A strict enum makes one stray value -
+   * "North America" instead of "NA" - throw away an entire otherwise-correct
+   * result. Normalised in code below, with the country as a fallback. */
+  region: z.string().describe('One of: NA, EMEA, APAC, LATAM'),
   latitude: z.number().describe('Approximate venue latitude'),
   longitude: z.number().describe('Approximate venue longitude'),
-  vertical: z.enum(['payments', 'treasury', 'travel', 'fintech', 'banking', 'fx', 'saas']),
+  vertical: z.string().describe('One of: payments, treasury, travel, fintech, banking, fx, saas'),
   est_attendance: z.number().int(),
   seg_psp: z.number().int().min(0).max(5),
   seg_xborder: z.number().int().min(0).max(5),
@@ -306,7 +353,7 @@ export async function researchEvent(input, { targetWindow = null } = {}) {
     ? `\n\nIMPORTANT: find the edition running closest to ${targetWindow}, NOT simply the next upcoming one. If no edition runs near then, say so in the notes and give the nearest edition you can confirm.`
     : ''
 
-  return research({
+  const draft = await research({
     schema: EventDraft,
     system: `You research business conferences for a sales team and return structured facts.\n\n${RUBRIC}\n\nAlways use web_search and web_fetch to read the real event page. Never answer from memory: conference dates change every year and a recalled date is a wrong date.
 
@@ -315,6 +362,12 @@ ${SEQUENTIAL}`,
       ? `Research this conference and fill in every field.\n\nURL: ${input.trim()}\n\nFetch that page. If it lacks dates, venue or attendance, search for the official site and this year's edition. Report what you actually read, and set dates_confidence honestly.` + edition
       : `Research the conference called "${input.trim()}" and fill in every field. Find its official site and ${targetWindow ? 'the relevant edition' : 'the NEXT upcoming edition - not a past one'}. If several events share this name, pick the largest and say which in the notes.` + edition,
   })
+
+  return {
+    ...draft,
+    region: normaliseRegion(draft.region, draft.country),
+    vertical: normaliseVertical(draft.vertical),
+  }
 }
 
 /**
