@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { analyseArc, VERDICTS } from '../lib/arc.js'
 import { SIGNALS } from '../lib/signals.js'
+import { normalizeCompany } from '../lib/names.js'
 import { formatRange } from '../lib/format.js'
 import { downloadCsv, CUSTOM_PROPERTIES } from '../lib/hubspot.js'
 
@@ -205,9 +206,12 @@ function ContactRow({ c, open, onToggle }) {
         <div>
           <h3 className="conf-name">{c.full_name}</h3>
           <div className="conf-meta">
-            <span>{c.current_title}</span>
-            <span className="dot">·</span>
-            <span>{c.current_company}</span>
+            {/* Either can be blank; joining unconditionally leaves a stray dot. */}
+            {[c.current_title, c.current_company].filter(Boolean).map((t, i) => (
+              <span key={t}>
+                {i > 0 && <span className="dot">· </span>}{t}
+              </span>
+            ))}
           </div>
         </div>
         <div className="contact-right">
@@ -243,8 +247,18 @@ function Arc({ c }) {
       <ol className="timeline">
         {c.encounters.map((e, i) => {
           const prev = c.encounters[i - 1]
-          const movedCompany = prev && prev.company_at_time !== e.company_at_time
-          const movedTitle = prev && prev.title_at_time !== e.title_at_time
+
+          /* Compare normalised, not raw. Typing "cloudPay solutions" where the
+           * last capture said "CloudPay Solutions" is the same employer, and
+           * flagging it as a job change is worse than missing one - it invents a
+           * buying signal out of a capital letter. normalizeCompany also handles
+           * the Ltd/Inc/GmbH noise. */
+          const movedCompany = prev &&
+            prev.company_at_time && e.company_at_time &&
+            normalizeCompany(prev.company_at_time) !== normalizeCompany(e.company_at_time)
+          const movedTitle = prev &&
+            prev.title_at_time && e.title_at_time &&
+            prev.title_at_time.trim().toLowerCase() !== e.title_at_time.trim().toLowerCase()
           const d = e.conferences
             ? formatRange(e.conferences.start_date, e.conferences.end_date)
             : null
@@ -262,11 +276,16 @@ function Arc({ c }) {
                   </span>
                 </div>
 
-                <div className="tl-role">
-                  {e.title_at_time}{e.company_at_time ? `, ${e.company_at_time}` : ''}
-                  {movedTitle && !movedCompany && <span className="tl-change">promoted</span>}
-                  {movedCompany && <span className="tl-change">new employer</span>}
-                </div>
+                {/* Either field can be blank - a rep on a show floor types a name
+                    and moves on. Join only what is actually there, or the row
+                    renders as a stray comma. */}
+                {(e.title_at_time || e.company_at_time) && (
+                  <div className="tl-role">
+                    {[e.title_at_time, e.company_at_time].filter(Boolean).join(', ')}
+                    {movedTitle && !movedCompany && <span className="tl-change">promoted</span>}
+                    {movedCompany && <span className="tl-change">new employer</span>}
+                  </div>
+                )}
 
                 {e.signals?.length > 0 && (
                   <div className="tl-signals">

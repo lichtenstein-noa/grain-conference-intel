@@ -1,5 +1,6 @@
 import { SIGNALS } from './signals.js'
 import { parseDate } from './format.js'
+import { normalizeCompany } from './names.js'
 
 /* ---------------------------------------------------------------------------
    Relationship arc
@@ -97,10 +98,14 @@ export function analyseArc(encounters, today = new Date().toISOString().slice(0,
   const recentCommercial = (last.signals || []).some((s) => COMMERCIAL.has(s))
   const browsingCount = list.filter((e) => (e.signals || []).includes('just_browsing')).length
 
-  const titleChanged = first.title_at_time && last.title_at_time &&
-    first.title_at_time !== last.title_at_time
-  const companyChanged = first.company_at_time && last.company_at_time &&
-    first.company_at_time !== last.company_at_time
+  /* Normalised comparison. A raw !== treats "CloudPay Solutions" and "cloudPay
+   * solutions" as a job change, and companyChanged drives the whole "New role"
+   * verdict - so a capital letter typed on a show floor could invent a fresh
+   * budget and a fresh evaluation that never happened. */
+  const titleChanged = Boolean(first.title_at_time && last.title_at_time &&
+    first.title_at_time.trim().toLowerCase() !== last.title_at_time.trim().toLowerCase())
+  const companyChanged = Boolean(first.company_at_time && last.company_at_time &&
+    normalizeCompany(first.company_at_time) !== normalizeCompany(last.company_at_time))
 
   const reps = [...new Set(list.map((e) => e.rep_id).filter(Boolean))]
 
