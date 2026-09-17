@@ -409,9 +409,9 @@ function Discovery({ finding, found, error, onDismiss, onReview }) {
       {found._example && (
         <p className="example-banner">
           <strong>Saved result</strong> — a real run from{' '}
-          {new Date(found._example.capturedAt).toLocaleDateString()} using{' '}
-          {found._example.model}, shown because no API key is set. Add one in Settings to search
-          live.
+          {new Date(found._example.capturedAt).toLocaleDateString()}
+          {found._example.model ? ` using ${found._example.model}` : ''}, shown because no API key
+          is set. Add one in Settings to search live.
         </p>
       )}
 
