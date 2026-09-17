@@ -139,6 +139,42 @@ because a rep needs to audit that judgment and a visible rule beats a black box 
 Each AI call **displays what it cost**. An AI feature whose price only shows up on a billing
 page is one you find out about too late.
 
+### HubSpot: a file, and why
+
+HubSpot's API rejects cross-origin browser requests. There's no client-side
+workaround — a live push needs server-side code holding a private app token, which is
+the one piece of infrastructure this deliberately doesn't have. So **Contacts → Send to
+HubSpot** produces an import file instead. That's a real path: it's how most teams load a
+conference list, and it works with no credentials.
+
+The server version is about thirty lines — one serverless function forwarding to
+`/crm/v3/objects/contacts`. It's left out rather than shipped untested, because an
+integration that looks finished and fails on someone else's machine is worse than an
+export that demonstrably works.
+
+**What's in the file matters more than how it gets there.** HubSpot can already get
+"we met Sarah Chen" from a badge scan. What it can't get is the read: how many times, in
+what direction, what changed, and what to do next.
+
+So the verdict maps onto HubSpot's **own built-in Lead Status** property rather than an
+inert custom field:
+
+| In this tool | Arrives in HubSpot as |
+|---|---|
+| Ready to close | `Open deal` |
+| Warming / New role | `In progress` |
+| Not moving | `Open` |
+| Gone quiet | `Attempted to contact` |
+| **Not buying** | **`Unqualified`** |
+
+That last row is the point. A contact who's been friendly across four meetings and eleven
+months without ever asking a commercial question arrives already marked unqualified — so
+the next rep doesn't spend another year on them because the record looked warm.
+
+Import via **Contacts → Import → File from computer**. Email, name, company, job title and
+Lead Status map to built-in properties; the rest need creating once as custom contact
+properties (the export panel lists them).
+
 ### Adding events is a salesperson's job, not a developer's
 
 The scoring model needs `seg_psp` and `seg_fx_exposed` as 0–5 integers. Nobody in sales

@@ -373,6 +373,7 @@ button { cursor: pointer; }
 }
 
 .bd-head {
+  line-height: 1.5;
   margin: 0 0 8px;
   font-size: 13px;
   font-weight: 650;
@@ -1483,3 +1484,12 @@ button { cursor: pointer; }
   font-size: 12.5px;
   line-height: 1.55;
 }
+
+.hs-payload {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  margin-top: 14px;
+}
+.hs-payload .settings-hint { margin-top: 4px; }

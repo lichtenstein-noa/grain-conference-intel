@@ -32,14 +32,41 @@ const TEMP_VALUE = { hot: 3, warm: 2, cold: 1 }
 /** Signals that mean a real buying process, not enthusiasm. */
 const COMMERCIAL = new Set(['requested_demo', 'named_timeline', 'named_budget'])
 
+/* Labels are written to be understood without sales jargon. "Tire-kicker" is an
+ * English idiom about kicking a car's tyres without buying - the brief uses it,
+ * but a rep reading a list at a glance should not have to decode an idiom, and
+ * plenty of the people using this will not be native speakers. `meaning` is the
+ * one-line explanation the UI shows on hover, so a label never has to carry the
+ * whole idea on its own. */
 export const VERDICTS = {
-  new:         { label: 'First meeting',   tone: 'neutral' },
-  warming:     { label: 'Warming',         tone: 'good' },
-  ready:       { label: 'Ready to close',  tone: 'good' },
-  stalled:     { label: 'Stalled',         tone: 'warn' },
-  tire_kicker: { label: 'Tire-kicker',     tone: 'bad' },
-  dormant:     { label: 'Dormant',         tone: 'warn' },
-  revived:     { label: 'New role',        tone: 'good' },
+  new: {
+    label: 'First meeting', tone: 'neutral',
+    meaning: 'Met once. Too early to read a direction.',
+  },
+  warming: {
+    label: 'Warming', tone: 'good',
+    meaning: 'Engagement is rising meeting on meeting, but nobody has asked them to buy yet.',
+  },
+  ready: {
+    label: 'Ready to close', tone: 'good',
+    meaning: 'Asked for a demo, a timeline or a budget at the most recent meeting.',
+  },
+  stalled: {
+    label: 'Not moving', tone: 'warn',
+    meaning: 'Interested and repeatedly engaged, but the same conversation keeps happening.',
+  },
+  tire_kicker: {
+    label: 'Not buying', tone: 'bad',
+    meaning: 'Friendly across many meetings and many months, but has never once asked a commercial question.',
+  },
+  dormant: {
+    label: 'Gone quiet', tone: 'warn',
+    meaning: 'Was engaged, sometimes very - then months of silence. Usually our side dropped it.',
+  },
+  revived: {
+    label: 'New role', tone: 'good',
+    meaning: 'Changed employer since we last met, which means a new budget and a fresh evaluation.',
+  },
 }
 
 const daysBetween = (a, b) => Math.round((parseDate(b) - parseDate(a)) / 86400000)

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase.js'
 import { analyseArc, VERDICTS } from '../lib/arc.js'
 import { SIGNALS } from '../lib/signals.js'
 import { formatRange } from '../lib/format.js'
+import { downloadCsv, CUSTOM_PROPERTIES } from '../lib/hubspot.js'
 
 const SIGNAL_LABEL = Object.fromEntries(SIGNALS.map((s) => [s.id, s.label]))
 
@@ -14,8 +15,9 @@ const PRIORITY = ['ready', 'dormant', 'revived', 'warming', 'stalled', 'new', 't
 export default function Contacts() {
   const [rows, setRows] = useState(null)
   const [error, setError] = useState(null)
-  const [filter, setFilter] = useState('repeat')
+  const [filter, setFilter] = useState('all')
   const [openId, setOpenId] = useState(null)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -73,20 +75,48 @@ export default function Contacts() {
     <>
       <div className="section-head">
         <h2>Contacts</h2>
-        <span className="faint">
-          {repeats} of {rows.length} met more than once
-        </span>
+        <div className="head-right">
+          <span className="faint">
+            {repeats} of {rows.length} met more than once
+          </span>
+          {/* Exports whatever is currently filtered, so "show me everyone ready
+              to close, send those to HubSpot" is one flow rather than an
+              all-or-nothing dump. */}
+          <button
+            className="btn-primary"
+            disabled={visible.length === 0}
+            onClick={() => setExporting(true)}
+          >
+            Send to HubSpot
+          </button>
+        </div>
       </div>
 
+      {exporting && (
+        <HubspotExport
+          contacts={visible}
+          filterLabel={filter === 'repeat' ? 'repeat contacts'
+            : filter === 'all' ? 'all contacts'
+            : VERDICTS[filter].label.toLowerCase()}
+          onClose={() => setExporting(false)}
+        />
+      )}
+
       <div className="filters">
-        <button className="chip" aria-pressed={filter === 'repeat'} onClick={() => setFilter('repeat')}>
-          Repeat contacts
-        </button>
         <button className="chip" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
           Everyone
         </button>
+        <button className="chip" aria-pressed={filter === 'repeat'} onClick={() => setFilter('repeat')}>
+          Met more than once
+        </button>
         {['ready', 'dormant', 'tire_kicker'].map((v) => (
-          <button key={v} className="chip" aria-pressed={filter === v} onClick={() => setFilter(v)}>
+          <button
+            key={v}
+            className="chip"
+            aria-pressed={filter === v}
+            onClick={() => setFilter(v)}
+            title={VERDICTS[v].meaning}
+          >
             {VERDICTS[v].label}
           </button>
         ))}
@@ -110,6 +140,70 @@ export default function Contacts() {
   )
 }
 
+/* The push into HubSpot.
+ *
+ * A file rather than an API call, and the panel says why rather than hiding it:
+ * HubSpot blocks browser requests, so a live push needs server-side code holding
+ * a token. Naming the constraint is more useful than a button that silently
+ * does something different from what its label implies. */
+function HubspotExport({ contacts, filterLabel, onClose }) {
+  const withEmail = contacts.filter((c) => c.email).length
+  const readable = contacts.filter((c) => c.encounters.length > 1).length
+
+  return (
+    <div className="settings" style={{ marginBottom: 18 }}>
+      <div className="settings-head">
+        <h3>Send {contacts.length} contacts to HubSpot</h3>
+        <button className="match-cancel" onClick={onClose}>Close</button>
+      </div>
+
+      <p className="plan-sub">
+        Everything currently shown — <strong>{filterLabel}</strong>. {withEmail} have an email
+        address to match on; {readable} carry a relationship read from more than one meeting.
+      </p>
+
+      <div className="hs-payload">
+        <div className="bd-head">What goes with each contact</div>
+        <p className="settings-hint">
+          Not just the name — HubSpot can get that from a badge scan. Each row carries the
+          judgement this tool has and HubSpot doesn’t: how many times you’ve met, which
+          direction it’s moving, what changed, and the recommended next step. The verdict maps
+          onto HubSpot’s own <strong>Lead Status</strong>, so a tire-kicker arrives marked
+          <em> Unqualified</em> and someone ready to close arrives as <em>Open deal</em> —
+          filterable and workable the moment it lands, not an inert custom field.
+        </p>
+      </div>
+
+      <div className="addconf-actions">
+        <button
+          className="cap-save"
+          onClick={() => {
+            downloadCsv(contacts, `hubspot-leads-${new Date().toISOString().slice(0, 10)}.csv`)
+            onClose()
+          }}
+        >
+          Download HubSpot import file
+        </button>
+      </div>
+
+      <p className="settings-note">
+        <strong>Why a file and not a live push.</strong> HubSpot’s API rejects cross-origin
+        browser requests, and this app has no backend — so a direct push would need server-side
+        code holding a private app token. That’s about thirty lines as a serverless function,
+        and it’s left out rather than shipped untested. A file import is a real path in the
+        meantime: it’s how most teams load a conference list, and it needs no credentials.
+        <br /><br />
+        In HubSpot: <strong>Contacts → Import → File from computer</strong>. Email, name,
+        company, job title and Lead Status map to built-in properties. The rest need creating
+        once as custom contact properties:{' '}
+        {CUSTOM_PROPERTIES.map((p, i) => (
+          <span key={p}>{i > 0 && ', '}<code>{p}</code></span>
+        ))}.
+      </p>
+    </div>
+  )
+}
+
 function ContactRow({ c, open, onToggle }) {
   const { arc } = c
   const v = VERDICTS[arc.verdict]
@@ -129,7 +223,7 @@ function ContactRow({ c, open, onToggle }) {
           <span className="meets">
             {c.encounters.length}× <span className="faint">met</span>
           </span>
-          <span className={`verdict verdict-${v.tone}`}>{v.label}</span>
+          <span className={`verdict verdict-${v.tone}`} title={v.meaning}>{v.label}</span>
         </div>
       </button>
 
@@ -144,7 +238,10 @@ function Arc({ c }) {
   return (
     <div className="breakdown">
       <div className="arc-why">
-        <h4 className="bd-head">Why this reads as {VERDICTS[arc.verdict].label.toLowerCase()}</h4>
+        <h4 className="bd-head">
+          {VERDICTS[arc.verdict].label}
+          <span className="faint"> — {VERDICTS[arc.verdict].meaning}</span>
+        </h4>
         <ul className="arc-reasons">
           {arc.reasons.map((r) => <li key={r}>{r}</li>)}
         </ul>
