@@ -59,10 +59,7 @@ export default function App() {
               </button>
 
               {settingsOpen && (
-                <Settings
-                  onClose={() => setSettingsOpen(false)}
-                  onChanged={() => setKeySet(hasAnthropicKey())}
-                />
+                <Settings onChanged={() => setKeySet(hasAnthropicKey())} />
               )}
             </div>
           </div>

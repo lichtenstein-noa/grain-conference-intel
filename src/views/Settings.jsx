@@ -4,7 +4,7 @@ import {
   looksLikeAnthropicKey, maskKey, getModel, setModel, MODELS,
 } from '../lib/settings.js'
 
-export default function Settings({ onClose, onChanged }) {
+export default function Settings({ onChanged }) {
   const [anthropic, setA] = useState(getAnthropicKey())
   const [hubspot, setH] = useState(getHubspotKey())
   const [model, setM] = useState(getModel())
@@ -23,9 +23,10 @@ export default function Settings({ onClose, onChanged }) {
 
   return (
     <div className="settings">
+      {/* No close button - Escape or a click outside dismisses it, which is what
+          people already try with a dropdown. */}
       <div className="settings-head">
         <h3>Settings</h3>
-        <button className="match-cancel" onClick={onClose}>Close</button>
       </div>
 
       <p className="plan-sub">

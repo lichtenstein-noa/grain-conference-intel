@@ -1292,15 +1292,17 @@ button { cursor: pointer; }
   right: 0;
   top: calc(100% + 8px);
   z-index: 60;
-  width: 380px;
+  width: 440px;
   max-width: calc(100vw - 32px);
-  max-height: min(70vh, 560px);
+  /* Tall enough that the whole panel fits without scrolling on a normal screen;
+     the cap only kicks in on short windows. */
+  max-height: min(88vh, 760px);
   overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--line-firm);
   border-radius: var(--radius);
   box-shadow: 0 10px 34px rgba(26, 31, 54, 0.18);
-  padding: 16px;
+  padding: 18px 18px 16px;
 }
 
 /* The HubSpot export reuses .settings as a plain inline card, not a popover. */
