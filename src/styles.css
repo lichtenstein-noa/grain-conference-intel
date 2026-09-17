@@ -852,15 +852,26 @@ button { cursor: pointer; }
 .stat-l { font-size: 12.5px; color: var(--muted); }
 
 .plan-load {
-  flex: 1 1 200px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
+  flex: 1 1 220px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 10px 12px;
+  padding: 9px 12px;
+}
+.plan-load-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 650;
+  color: var(--faint);
+  margin-bottom: 5px;
+}
+.plan-load-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.plan-load-free {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--warm);
 }
 .loadchip {
   display: inline-flex;
@@ -890,7 +901,89 @@ button { cursor: pointer; }
   color: #fff;
 }
 
-.reppick { display: flex; gap: 4px; flex: none; }
+/* --- Rep assignment (scales past a handful of people) -------------------- */
+.repassign { position: relative; flex: none; }
+.repassign-row { display: flex; gap: 4px; align-items: center; }
+
+.avatar-more {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.repassign-btn {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px dashed var(--line-firm);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+.repassign-btn.is-empty { border-style: solid; padding: 0 10px; }
+.repassign-btn:hover,
+.repassign-btn[aria-expanded='true'] {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  background: var(--accent-bg);
+}
+
+.repassign-pop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  width: 250px;
+  background: var(--surface);
+  border: 1px solid var(--line-firm);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 26px rgba(26, 31, 54, 0.14);
+  padding: 7px;
+}
+
+.repassign-search {
+  width: 100%;
+  border: 1px solid var(--line-firm);
+  border-radius: var(--radius-sm);
+  padding: 6px 9px;
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+
+.repassign-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.repassign-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 7px;
+  text-align: left;
+  font-size: 13.5px;
+}
+.repassign-item:hover { background: var(--bg); }
+.repassign-item .avatar.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.repassign-name { flex: 1; min-width: 0; }
+.repassign-tick { color: var(--accent); font-weight: 700; width: 12px; }
+.repassign-none { padding: 8px 7px; font-size: 13px; color: var(--faint); }
 
 .plan-block { margin-bottom: 28px; }
 .plan-h {
@@ -1377,4 +1470,16 @@ button { cursor: pointer; }
   margin-top: 4px;
   font-size: 12.5px;
   color: var(--tier-a);
+}
+
+/* A saved result is always labelled as one. Showing cached output as if it were
+   live would undercut everything else this tool says about verification. */
+.example-banner {
+  margin: 8px 0 0;
+  padding: 8px 11px;
+  border-radius: var(--radius-sm);
+  background: var(--tier-b-bg);
+  color: var(--tier-b);
+  font-size: 12.5px;
+  line-height: 1.55;
 }

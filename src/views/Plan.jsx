@@ -8,12 +8,12 @@ import {
 import { formatRange } from '../lib/format.js'
 import { discoverNearTrip } from '../lib/ai.js'
 import { hasAnthropicKey } from '../lib/settings.js'
+import { exampleDiscovery } from '../lib/examples.js'
 import AddConference from './AddConference.jsx'
+import RepAssign, { initials } from './RepAssign.jsx'
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
                      'July', 'August', 'September', 'October', 'November', 'December']
-
-const initials = (name) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 
 export default function Plan() {
   const [confs, setConfs] = useState(null)
@@ -37,6 +37,23 @@ export default function Plan() {
     setAnchor(events)
     setFound(null)
     setFindError(null)
+
+    /* No key: show a saved result from a real run rather than a dead button.
+     * Most people opening the live site have no key - the brief requires keys to
+     * be user-supplied - and a greyed-out control tells them nothing about what
+     * the feature does. Labelled as saved, never passed off as live. */
+    if (!hasAnthropicKey()) {
+      const example = exampleDiscovery(events)
+      if (example) setFound({ ...example.result, _example: example })
+      else setFindError(
+        'Searches the web for conferences within ' +
+        `${MAX_TRIP_DAYS} days and about 1,500 km of this trip, checks each one against a real ` +
+        'page, and offers it for review — so one flight covers more than one event. ' +
+        'Needs an Anthropic API key: add one in Settings.',
+      )
+      return
+    }
+
     setFinding(true)
     try {
       const result = await discoverNearTrip({
@@ -142,14 +159,7 @@ export default function Plan() {
         <Stat n={gaps.length} label={gaps.length === 1 ? 'Tier A uncovered' : 'Tier A uncovered'} tone={gaps.length ? 'bad' : 'good'} />
         <Stat n={clusters.length} label="trips that combine" tone="good" />
         <Stat n={conflicts.length} label="date clashes" tone={conflicts.length ? 'warn' : 'good'} />
-        <div className="plan-load">
-          {reps.map((r) => (
-            <span key={r.id} className="loadchip" title={`${r.name} — ${r.home_city}`}>
-              <span className="avatar">{initials(r.name)}</span>
-              {loads[r.id] ?? 0}
-            </span>
-          ))}
-        </div>
+        <WorkloadStrip reps={reps} loads={loads} />
       </div>
 
       {gaps.length > 0 && (
@@ -178,7 +188,7 @@ export default function Plan() {
                     </div>
                   )}
                 </div>
-                <RepPicker reps={reps} assigned={byConf[c.id] || []} onToggle={(rid) => toggle(c.id, rid)} />
+                <RepAssign reps={reps} assigned={byConf[c.id] || []} onToggle={(rid) => toggle(c.id, rid)} />
               </div>
             )
           })}
@@ -238,15 +248,21 @@ export default function Plan() {
                 <div className="cluster-actions">
                   <button
                     className="chip"
-                    disabled={finding || !hasAnthropicKey()}
+                    disabled={finding}
                     onClick={() => findNearby(cl.events)}
-                    title={hasAnthropicKey() ? undefined : 'Add an Anthropic API key in Settings'}
                   >
-                    {finding && anchor?.[0]?.id === cl.events[0].id ? 'Searching…' : 'What else is nearby?'}
+                    {/* Only promise an example when one actually exists for this
+                        trip, otherwise the label offers something the click
+                        cannot deliver. */}
+                    {finding && anchor?.[0]?.id === cl.events[0].id
+                      ? 'Searching…'
+                      : !hasAnthropicKey() && exampleDiscovery(cl.events)
+                        ? 'What else is nearby? (example)'
+                        : 'What else is nearby?'}
                   </button>
                   {/* Lit only when this rep is on EVERY event in the trip -
                       "on one leg of it" is not the same as "doing this trip". */}
-                  <RepPicker
+                  <RepAssign
                     reps={reps}
                     assigned={reps
                       .filter((r) => cl.events.every((e) =>
@@ -316,7 +332,7 @@ export default function Plan() {
                       <strong>{c.name}</strong>
                       <span className="faint"> · {c.city} · {dateLabel(c)}</span>
                     </span>
-                    <RepPicker
+                    <RepAssign
                       reps={reps}
                       assigned={byConf[c.id] || []}
                       onToggle={(rid) => toggle(c.id, rid)}
@@ -366,16 +382,48 @@ function Discovery({ finding, found, error, onDismiss, onReview }) {
         <strong>{found.events.length ? `${found.events.length} possible additions` : 'Nothing worth adding'}</strong>
         <span className="discovery-meta">
           {found._spend && <span className="spend">~${found._spend.usd.toFixed(3)}</span>}
+          {/* Captures a genuine run so it can be shipped as the keyless example.
+              Real output pasted into examples.js beats a plausible-looking
+              fixture written by hand. */}
+          {!found._example && (
+            <button
+              className="chip"
+              title="Copy this result as JSON, to save as the no-key example"
+              onClick={() => {
+                const { _spend, ...clean } = found
+                navigator.clipboard?.writeText(JSON.stringify(clean, null, 2))
+              }}
+            >
+              Copy JSON
+            </button>
+          )}
           <button className="chip" onClick={onDismiss}>Dismiss</button>
         </span>
       </div>
+      {found._example && (
+        <p className="example-banner">
+          <strong>Saved result</strong> — a real run from{' '}
+          {new Date(found._example.capturedAt).toLocaleDateString()} using{' '}
+          {found._example.model}, shown because no API key is set. Add one in Settings to search
+          live.
+        </p>
+      )}
+
       <p className="settings-hint">{found.searched}</p>
 
       {found.events.length === 0 ? (
-        <p className="muted" style={{ fontSize: 13.5 }}>
-          No other relevant events found close enough in time and place. That’s a real answer —
-          this trip is already the right shape.
-        </p>
+        found.outcome === 'search_failed' ? (
+          <p className="addconf-warn">
+            The search didn’t complete — most likely web-search rate limits on this account —
+            so nothing could be checked against a live page. This is <strong>not</strong> a
+            verdict on the trip. Worth trying again in a minute.
+          </p>
+        ) : (
+          <p className="muted" style={{ fontSize: 13.5 }}>
+            No other relevant events found close enough in time and place. That’s a real answer —
+            this trip is already the right shape.
+          </p>
+        )
       ) : (
         found.events.map((e) => (
           <div key={`${e.name}-${e.start_date}`} className="disc-card">
@@ -413,30 +461,47 @@ function LegLabel({ leg }) {
   return <span className="leg">↳ {text} ↳</span>
 }
 
+/* Who is carrying the year.
+ *
+ * Listing every rep with a count works at four people and becomes a wall at
+ * twenty - and the wall hides the only two facts worth acting on: who is
+ * overloaded, and who has nothing booked. So the strip shows the busiest few
+ * and, separately, names anyone on zero. The rest are a count. */
+function WorkloadStrip({ reps, loads }) {
+  const ranked = [...reps].sort((a, b) => (loads[b.id] ?? 0) - (loads[a.id] ?? 0))
+  const unused = ranked.filter((r) => !(loads[r.id] ?? 0))
+  const busy = ranked.filter((r) => loads[r.id] ?? 0).slice(0, 5)
+  const hidden = ranked.filter((r) => loads[r.id] ?? 0).length - busy.length
+
+  return (
+    <div className="plan-load">
+      <span className="plan-load-label">Coverage load</span>
+      <div className="plan-load-chips">
+        {busy.map((r) => (
+          <span key={r.id} className="loadchip" title={`${r.name}${r.home_city ? ` — ${r.home_city}` : ''}`}>
+            <span className="avatar">{initials(r.name)}</span>
+            {loads[r.id]}
+          </span>
+        ))}
+        {hidden > 0 && <span className="loadchip faint">+{hidden} more</span>}
+        {busy.length === 0 && <span className="faint">nobody assigned yet</span>}
+      </div>
+      {unused.length > 0 && (
+        <div className="plan-load-free" title={unused.map((r) => r.name).join(', ')}>
+          {unused.length === 1
+            ? `${unused[0].name} has nothing booked`
+            : `${unused.length} reps have nothing booked`}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Stat({ n, label, tone }) {
   return (
     <div className={`stat stat-${tone}`}>
       <span className="stat-n">{n}</span>
       <span className="stat-l">{label}</span>
-    </div>
-  )
-}
-
-function RepPicker({ reps, assigned, onToggle, label }) {
-  const ids = new Set(assigned.map((a) => a.rep_id))
-  return (
-    <div className="reppick" title={label}>
-      {reps.map((r) => (
-        <button
-          key={r.id}
-          className="avatar avatar-btn"
-          aria-pressed={ids.has(r.id)}
-          onClick={() => onToggle(r.id)}
-          title={`${r.name} — ${r.home_city}`}
-        >
-          {initials(r.name)}
-        </button>
-      ))}
     </div>
   )
 }

@@ -63,6 +63,20 @@ const RESEARCH_TOOLS = [
  * deliberation this task does not need, charged in thinking tokens. */
 const EFFORT = 'low'
 
+/* Firing several searches at once trips the per-account search rate limit on a
+ * new or low-tier account. The failure mode is nasty: the model cannot verify
+ * anything against a live page, correctly refuses to list events from memory,
+ * and returns an empty result - so a rate limit looks exactly like "nothing
+ * found". The API flag for serialising tool calls is unavailable here (see the
+ * note at the request), so it is asked for directly. */
+const SEQUENTIAL = `
+Pace your searches. Run ONE web_search at a time and read its results before
+starting another - never issue several searches at once. Parallel searches trip
+a rate limit, and a rate-limited search cannot verify anything, which produces a
+misleadingly empty answer. Fewer, better-targeted searches beat many scattered
+ones.
+`.trim()
+
 /* Each extra turn re-bills everything read so far. Two searches and a fetch
  * should finish inside three. */
 const MAX_TURNS = 3
@@ -166,6 +180,13 @@ const EventDraft = z.object({
 const DiscoveryResult = z.object({
   events: z.array(EventDraft).max(6),
   searched: z.string().describe('One sentence on what you looked for and where.'),
+  /* An empty list has two very different meanings and the UI must not conflate
+   * them. "I searched properly and this trip is already the right shape" is a
+   * useful answer. "My searches failed so I could not verify anything" is a
+   * tooling problem wearing the same clothes - and telling a rep their plan is
+   * optimal when the search never ran is worse than showing an error. */
+  outcome: z.enum(['searched_ok', 'search_failed'])
+    .describe('search_failed if rate limits, fetch errors or blocked pages stopped you verifying candidates properly'),
 })
 
 function client() {
@@ -197,6 +218,11 @@ async function research({ schema, system, prompt }) {
         max_tokens: 8000,
         system,
         tools: RESEARCH_TOOLS,
+        /* NOTE: tool_choice.disable_parallel_tool_use is rejected here with a
+         * 400. The _20260209 search and fetch tools run code execution under the
+         * hood for dynamic filtering, which counts as programmatic tool calling,
+         * and the two features are mutually exclusive. Pacing is asked for in the
+         * prompt instead - see SEQUENTIAL below. */
         messages,
         output_config: { format: zodOutputFormat(schema), effort: EFFORT },
       })
@@ -237,7 +263,9 @@ export async function researchEvent(input) {
   const isUrl = /^https?:\/\//i.test(input.trim())
   return research({
     schema: EventDraft,
-    system: `You research business conferences for a sales team and return structured facts.\n\n${RUBRIC}\n\nAlways use web_search and web_fetch to read the real event page. Never answer from memory: conference dates change every year and a recalled date is a wrong date.`,
+    system: `You research business conferences for a sales team and return structured facts.\n\n${RUBRIC}\n\nAlways use web_search and web_fetch to read the real event page. Never answer from memory: conference dates change every year and a recalled date is a wrong date.
+
+${SEQUENTIAL}`,
     prompt: isUrl
       ? `Research this conference and fill in every field.\n\nURL: ${input.trim()}\n\nFetch that page. If it lacks dates, venue or attendance, search for the official site and this year's edition. Report what you actually read, and set dates_confidence honestly.`
       : `Research the conference called "${input.trim()}" and fill in every field. Find its official site and the NEXT upcoming edition — not a past one. If several events share this name, pick the largest and say which in the notes.`,
@@ -260,7 +288,9 @@ export async function discoverNearTrip({ events, existingNames, radiusKm = 1500,
 
   return research({
     schema: DiscoveryResult,
-    system: `You find business conferences a sales team does not already know about.\n\n${RUBRIC}\n\nAlways use web_search and web_fetch. Never list an event from memory — verify each one exists on a real page with real dates, and give the URL you read it from. It is far better to return two verified events than six plausible ones.`,
+    system: `You find business conferences a sales team does not already know about.\n\n${RUBRIC}\n\nAlways use web_search and web_fetch. Never list an event from memory — verify each one exists on a real page with real dates, and give the URL you read it from. It is far better to return two verified events than six plausible ones.
+
+${SEQUENTIAL}`,
     prompt:
       `A Grain rep is already travelling for:\n\n${anchor}\n\n` +
       `Find up to 4 OTHER conferences that could be added to this same trip: within about ${radiusKm} km ` +
