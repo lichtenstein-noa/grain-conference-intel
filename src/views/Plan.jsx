@@ -316,8 +316,8 @@ Overlapping dates, too far apart to combine.
       <section className="plan-block">
         <h3 className="plan-h">The year</h3>
         <p className="plan-sub">
-          Tap a rep to assign or unassign. Where someone is already going, ask what else that
-          trip could cover.
+          Use + to assign a rep. Where someone is already going, ask what else that trip could
+          cover.
         </p>
         {months.map(({ key, events }) => {
           const [y, m] = key.split('-')
