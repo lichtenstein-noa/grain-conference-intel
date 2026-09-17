@@ -129,7 +129,7 @@ function judge(f) {
   if (f.daysSinceLast > 240) {
     reasons.push(`No contact for ${Math.round(f.daysSinceLast / 30)} months`)
     if (f.everCommercial) {
-      reasons.push('Previously asked for a demo or named a budget — this went cold on our side')
+      reasons.push('Previously asked for a demo or named a budget - this went cold on our side')
     }
     return { verdict: 'dormant', reasons }
   }
@@ -181,7 +181,7 @@ function judge(f) {
 function nextMove(verdict, f) {
   switch (verdict) {
     case 'ready':
-      return 'Book the meeting before the event, not after. They have told you the timeline — work backwards from it.'
+      return 'Book the meeting before the event, not after. They have told you the timeline - work backwards from it.'
     case 'warming':
       return 'Ask a commercial question at the next meeting. They are engaged and nobody has asked them to buy anything.'
     case 'revived':
@@ -189,9 +189,9 @@ function nextMove(verdict, f) {
     case 'tire_kicker':
       return 'Stop investing booth time here. Say hello, keep it to five minutes, spend the hour on someone who has asked a commercial question.'
     case 'dormant':
-      return 'Re-open before the next event, with a reason. They were ready once and we let it lapse — acknowledge that rather than starting over.'
+      return 'Re-open before the next event, with a reason. They were ready once and we let it lapse - acknowledge that rather than starting over.'
     case 'stalled':
-      return 'Change the question. The same conversation has happened repeatedly, so something unspoken is blocking it — ask what would have to be true to move forward.'
+      return 'Change the question. The same conversation has happened repeatedly, so something unspoken is blocking it - ask what would have to be true to move forward.'
     default:
       return 'Too early to read. One more meeting will tell you the direction.'
   }

@@ -117,7 +117,7 @@ function friendlyError(err) {
     return 'Your Anthropic account is out of credit. Top it up under Plans & Billing at console.anthropic.com, then try again.'
   }
   if (/authentication|invalid x-api-key|\b401\b/i.test(raw)) {
-    return 'That API key was rejected. Check it in Settings — keys start with sk-ant-.'
+    return 'That API key was rejected. Check it in Settings - keys start with sk-ant-.'
   }
   if (/rate.?limit|\b429\b/i.test(raw)) {
     return 'Rate limited by the API. Wait a moment and try again.'
@@ -126,7 +126,7 @@ function friendlyError(err) {
     return 'The API is busy right now. Try again in a minute.'
   }
   if (/timeout|timed out|aborted/i.test(raw)) {
-    return 'That search ran too long and was stopped. Open-ended discovery is slow and unreliable on a low-tier API account — looking a single event up by URL is much faster.'
+    return 'That search ran too long and was stopped. Open-ended discovery is slow and unreliable on a low-tier API account - looking a single event up by URL is much faster.'
   }
   return raw
 }
@@ -291,7 +291,7 @@ async function research({ schema, system, prompt, tools = RESEARCH_TOOLS }) {
   )
 }
 
-/** "Here is an event — fill in the form." Accepts a URL or just a name. */
+/** "Here is an event - fill in the form." Accepts a URL or just a name. */
 export async function researchEvent(input, { targetWindow = null } = {}) {
   const isUrl = /^https?:\/\//i.test(input.trim())
 
@@ -313,12 +313,12 @@ export async function researchEvent(input, { targetWindow = null } = {}) {
 ${SEQUENTIAL}`,
     prompt: isUrl
       ? `Research this conference and fill in every field.\n\nURL: ${input.trim()}\n\nFetch that page. If it lacks dates, venue or attendance, search for the official site and this year's edition. Report what you actually read, and set dates_confidence honestly.` + edition
-      : `Research the conference called "${input.trim()}" and fill in every field. Find its official site and ${targetWindow ? 'the relevant edition' : 'the NEXT upcoming edition — not a past one'}. If several events share this name, pick the largest and say which in the notes.` + edition,
+      : `Research the conference called "${input.trim()}" and fill in every field. Find its official site and ${targetWindow ? 'the relevant edition' : 'the NEXT upcoming edition - not a past one'}. If several events share this name, pick the largest and say which in the notes.` + edition,
   })
 }
 
 /**
- * "I'm already going to these — what else is nearby?"
+ * "I'm already going to these - what else is nearby?"
  *
  * The anchored version of conference discovery. Open-ended "find me fintech
  * events" invites the model to invent plausible-sounding events with invented

@@ -251,9 +251,7 @@ function Breakdown({ c }) {
           </table>
 
           <p className="bd-note">
-            Cost tier {c.cost_tier}/5 · value above the bar per unit cost{' '}
-            <strong>{c.efficiency}</strong>. Cost is kept out of the fit score deliberately —
-            an expensive event can still be the right call, it just needs a bigger commitment.
+            Cost tier {c.cost_tier}/5 · value per unit cost <strong>{c.efficiency}</strong>
           </p>
         </section>
 

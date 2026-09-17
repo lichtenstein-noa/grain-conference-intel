@@ -40,13 +40,13 @@ const QUESTIONS = [
   {
     col: 'seg_fx_exposed',
     q: 'How many treasury and finance people will actually be in the room?',
-    hint: 'The finance function itself, attending in person — not companies that merely have FX exposure. A wholesaler has the exposure; the person it sends to a travel show is rarely treasury.',
+    hint: 'Treasury and finance people attending in person - not companies that merely have exposure.',
     options: PRESENCE,
   },
   {
     col: 'buyer_seniority',
     q: 'Will the people who sign off on an FX decision be there?',
-    hint: 'Senior in the function that buys. A commercial director at a travel show cannot sign this; a founder at a small PSP can.',
+    hint: 'Senior in the function that buys, not senior in general.',
     options: ['Never', 'Rarely', 'A few', 'Some', 'Many', 'That is who it is for'],
   },
   {
@@ -65,11 +65,11 @@ const QUESTIONS = [
 
 const COST = [
   null,
-  'Cheap — just passes and a flight',
-  'Modest — passes, maybe a table',
-  'Mid — a small stand',
-  'Expensive — proper stand and a team',
-  'Flagship spend — the big annual bet',
+  'Cheap - just passes and a flight',
+  'Modest - passes, maybe a table',
+  'Mid - a small stand',
+  'Expensive - proper stand and a team',
+  'Flagship spend - the big annual bet',
 ]
 
 const VERTICALS = ['payments', 'treasury', 'travel', 'fintech', 'banking', 'fx', 'saas']
@@ -241,7 +241,7 @@ export default function AddConference({ onSaved, onCancel, seed }) {
             : 'Add a key in Settings to fill this in automatically, or type it all by hand.'}
         </p>
         {researching && (
-          <p className="settings-hint">Reading the event page — this takes a while.</p>
+          <p className="settings-hint">Reading the event page - this takes a while.</p>
         )}
         {aiError && <p className="addconf-warn">{aiError}</p>}
       </div>
@@ -357,7 +357,7 @@ export default function AddConference({ onSaved, onCancel, seed }) {
       />
 
       <label className="fld fld-wide">
-        <span>Notes — why this event matters, or doesn’t</span>
+        <span>Notes - why this event matters, or doesn’t</span>
         <textarea rows={2} value={f.notes} onChange={(e) => set({ notes: e.target.value })}
                   placeholder="Who goes, what the room is like, anything a colleague should know." />
       </label>
@@ -386,7 +386,7 @@ export default function AddConference({ onSaved, onCancel, seed }) {
 /* What the model concluded and why.
  *
  * The reasoning is the point, not decoration. A rating of 5 is unverifiable and
- * a rep who cannot check it will eventually stop trusting all of them; "5 —
+ * a rep who cannot check it will eventually stop trusting all of them; "5 -
  * the exhibitor list is almost entirely acquirers and payfacs" is something
  * they can disagree with. Same for the source link and the dates warning: the
  * model is a fast researcher whose work still gets reviewed. */
@@ -412,7 +412,7 @@ function DraftNote({ draft }) {
 
       {draft.dates_confidence !== 'high' && (
         <p className="draftnote-warn">
-Dates read as <strong>{draft.dates_confidence} confidence</strong> — check before anyone books.
+Dates read as <strong>{draft.dates_confidence} confidence</strong> - check before anyone books.
         </p>
       )}
 

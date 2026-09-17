@@ -161,7 +161,7 @@ export function scoreMatch(input, contact) {
 
   if (sameCompany) reasons.push(`Still at ${contact.current_company}`)
   else if (companyKnown) {
-    reasons.push(`Different company — was ${contact.current_company}, now ${input.company.trim()}`)
+    reasons.push(`Different company - was ${contact.current_company}, now ${input.company.trim()}`)
   }
 
   /* Confidence, most to least certain. Note the deliberate asymmetry: an exact

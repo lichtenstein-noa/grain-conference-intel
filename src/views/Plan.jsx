@@ -47,7 +47,7 @@ export default function Plan() {
       if (example) setFound({ ...example.result, _example: example })
       else setFindError(
 `Finds conferences within ${MAX_TRIP_DAYS} days and 1,500 km of this trip and ` +
-        'checks each against a real page. Needs an Anthropic API key — add one in Settings.',
+        'checks each against a real page. Needs an Anthropic API key - add one in Settings.',
       )
       return
     }
@@ -164,7 +164,7 @@ export default function Plan() {
         <section className="plan-block">
           <h3 className="plan-h">Nobody is going to these</h3>
           <p className="plan-sub">
-The clearest under-investment on the calendar.
+Tier A events with nobody assigned.
           </p>
           {gaps.map((c) => {
             /* An uncovered event can legitimately also appear under trips, and
@@ -181,7 +181,7 @@ The clearest under-investment on the calendar.
                   <span className="faint"> · {c.city} · {dateLabel(c)} · fit {c.fit}</span>
                   {partner?.length > 0 && (
                     <div className="gap-hint">
-Combines with {partner.map((e) => e.name).join(' and ')} — someone is already nearby.
+Combines with {partner.map((e) => e.name).join(' and ')} - someone is already nearby.
                     </div>
                   )}
                 </div>
@@ -196,8 +196,7 @@ Combines with {partner.map((e) => e.name).join(' and ')} — someone is already 
         <section className="plan-block">
           <h3 className="plan-h">Trips worth combining</h3>
           <p className="plan-sub">
-Close enough to combine — under {MAX_TRIP_DAYS} days away, {MAX_GAP_DAYS} days
-            between stops. Once the flight is paid for, the next event is nearly free.
+Within {MAX_TRIP_DAYS} days, no more than {MAX_GAP_DAYS} days between stops.
           </p>
           {clusters.map((cl) => (
             <div key={cl.id} className="plan-card is-cluster">
@@ -288,7 +287,7 @@ Close enough to combine — under {MAX_TRIP_DAYS} days away, {MAX_GAP_DAYS} days
         <section className="plan-block">
           <h3 className="plan-h">Same week, different continents</h3>
           <p className="plan-sub">
-Worth attending, impossible to combine. Two people, or a decision.
+Overlapping dates, too far apart to combine.
           </p>
           {conflicts.map((g, i) => (
             <div key={i} className="plan-card is-conflict">
@@ -414,7 +413,7 @@ function Discovery({ finding, found, error, onDismiss, onReview }) {
       {found.events.length === 0 ? (
         found.outcome === 'search_failed' ? (
           <p className="addconf-warn">
-            The search didn’t complete, so nothing was checked. Not a verdict on the trip —
+            The search didn’t complete, so nothing was checked. Not a verdict on the trip -
             try again shortly.
           </p>
         ) : found.ruledOut?.length ? (
@@ -515,7 +514,7 @@ function WorkloadStrip({ reps, loads }) {
       <span className="plan-load-label">Coverage load</span>
       <div className="plan-load-chips">
         {busy.map((r) => (
-          <span key={r.id} className="loadchip" title={`${r.name}${r.home_city ? ` — ${r.home_city}` : ''}`}>
+          <span key={r.id} className="loadchip" title={`${r.name}${r.home_city ? ` - ${r.home_city}` : ''}`}>
             <span className="avatar">{initials(r.name)}</span>
             {loads[r.id]}
           </span>

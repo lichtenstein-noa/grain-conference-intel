@@ -186,7 +186,7 @@ export default function Capture() {
         <textarea
           className="cap-notes"
           rows={2}
-          placeholder="Anything they said — tap the mic on your keyboard and just talk"
+          placeholder="Anything they said - tap the mic on your keyboard and just talk"
           value={form.notes}
           onChange={(e) => set({ notes: e.target.value })}
         />
@@ -252,7 +252,7 @@ function ConferenceBar({ conference, confs, onChange, rep, onSwitchRep }) {
           >
             {confs.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name} — {c.city}
+                {c.name} - {c.city}
               </option>
             ))}
           </select>
@@ -290,7 +290,7 @@ function Flash({ result, onDismiss }) {
         <strong>{contact.full_name}</strong> saved
         {repeat && (
           <>
-            {' — '}
+            {' - '}
             <strong>
               {priorCount === 1 ? '2nd time' : `${priorCount + 1}${ordinal(priorCount + 1)} time`} you
               {"'"}ve met them
@@ -339,14 +339,14 @@ function MatchPrompt({ typed, candidates, saving, onSame, onNew, onCancel }) {
             {m.reasons.map((r) => <li key={r}>{r}</li>)}
           </ul>
           <button className="match-yes" disabled={saving} onClick={() => onSame(m.contact.id)}>
-            Yes — same person
+            Yes - same person
           </button>
         </div>
       ))}
 
       <div className="match-actions">
         <button className="match-no" disabled={saving} onClick={onNew}>
-          No — someone new
+          No - someone new
         </button>
         <button className="match-cancel" disabled={saving} onClick={onCancel}>
           Back

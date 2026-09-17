@@ -39,7 +39,7 @@ export const EXAMPLE_DISCOVERIES = {
         {
           name: 'Merchant Risk Council Europe (MRC Barcelona)',
           detail: 'Barcelona, Spain',
-          why: 'could not verify — the API spend limit was reached mid-run',
+          why: 'could not verify - the API spend limit was reached mid-run',
         },
         {
           name: 'FinovateEurope',

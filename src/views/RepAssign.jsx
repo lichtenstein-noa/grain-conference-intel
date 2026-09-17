@@ -66,7 +66,7 @@ export default function RepAssign({ reps, assigned, onToggle, compact = false })
     <div className="repassign" ref={wrapRef}>
       <div className="repassign-row">
         {shown.map((r) => (
-          <span key={r.id} className="avatar" title={`${r.name}${r.home_city ? ` — ${r.home_city}` : ''}`}>
+          <span key={r.id} className="avatar" title={`${r.name}${r.home_city ? ` - ${r.home_city}` : ''}`}>
             {initials(r.name)}
           </span>
         ))}

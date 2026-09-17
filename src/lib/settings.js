@@ -34,8 +34,8 @@ const KEYS = {
  * Switchable rather than assumed, so the choice can be measured on a real
  * event instead of argued about. */
 export const MODELS = [
-  { id: 'claude-opus-5',  label: 'Opus 5',   note: '$5 / $25 per Mtok — best judgement' },
-  { id: 'claude-sonnet-5', label: 'Sonnet 5', note: '$2 / $10 per Mtok — 2.5x cheaper' },
+  { id: 'claude-opus-5',  label: 'Opus 5',   note: '$5 / $25 per Mtok - best judgement' },
+  { id: 'claude-sonnet-5', label: 'Sonnet 5', note: '$2 / $10 per Mtok - 2.5x cheaper' },
 ]
 
 export const DEFAULT_MODEL = 'claude-opus-5'

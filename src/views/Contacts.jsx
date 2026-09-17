@@ -165,11 +165,9 @@ function HubspotExport({ contacts, filterLabel, onClose }) {
       <div className="hs-payload">
         <div className="bd-head">What goes with each contact</div>
         <p className="settings-hint">
-          Not just names — HubSpot gets those from a badge scan. Each row carries how many
-          times you’ve met, which way it’s moving, and the next step. The verdict maps onto
-          HubSpot’s own <strong>Lead Status</strong>, so someone not buying arrives marked{' '}
-          <em>Unqualified</em> and someone ready arrives as <em>Open deal</em> — workable the
-          moment it lands.
+          Meeting history, relationship read and next step. <strong>Lead Status</strong> is
+          set from the verdict, so someone not buying arrives as <em>Unqualified</em> and
+          someone ready arrives as <em>Open deal</em>.
         </p>
       </div>
 
@@ -186,12 +184,8 @@ function HubspotExport({ contacts, filterLabel, onClose }) {
       </div>
 
       <p className="settings-note">
-        <strong>Why a file, not a live push.</strong> HubSpot’s API blocks browser requests,
-        and this app has no backend. The server version is ~30 lines, left out rather than
-        shipped untested — and a file import is how most teams load a conference list anyway.
-        <br /><br />
         In HubSpot: <strong>Contacts → Import → File from computer</strong>. Email, name,
-        company, job title and Lead Status map to built-in properties. The rest need creating
+        company, job title and Lead Status map to built-in properties. These need creating
         once as custom contact properties:{' '}
         {CUSTOM_PROPERTIES.map((p, i) => (
           <span key={p}>{i > 0 && ', '}<code>{p}</code></span>
@@ -237,7 +231,7 @@ function Arc({ c }) {
       <div className="arc-why">
         <h4 className="bd-head">
           {VERDICTS[arc.verdict].label}
-          <span className="faint"> — {VERDICTS[arc.verdict].meaning}</span>
+          <span className="faint"> - {VERDICTS[arc.verdict].meaning}</span>
         </h4>
         <ul className="arc-reasons">
           {arc.reasons.map((r) => <li key={r}>{r}</li>)}

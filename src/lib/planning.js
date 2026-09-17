@@ -125,8 +125,8 @@ const days = (a, b) => Math.round((parseDate(b) - parseDate(a)) / 86400000)
 function proximity(km) {
   if (km === null) return null
   if (km < 50)   return { band: 'same city',   note: 'Same city' }
-  if (km < 800)  return { band: 'short hop',   note: `${km} km — short hop` }
-  if (km < 2000) return { band: 'same leg',    note: `${km} km — same continental leg` }
+  if (km < 800)  return { band: 'short hop',   note: `${km} km - short hop` }
+  if (km < 2000) return { band: 'same leg',    note: `${km} km - same continental leg` }
   return null
 }
 

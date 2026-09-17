@@ -45,14 +45,14 @@ Stored in this browser only. Everyone uses their own.
       </label>
       {anthropicLooksWrong && (
         <p className="addconf-warn">
-          That doesn’t look like an Anthropic key — they start with <code>sk-ant-</code>.
+          That doesn’t look like an Anthropic key - they start with <code>sk-ant-</code>.
         </p>
       )}
       <p className="settings-hint">
 Powers event research. From{' '}
         <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">
           console.anthropic.com
-        </a> — add credit first, or calls fail. Without a key you still see saved examples.
+        </a> - add credit first, or calls fail. Without a key you still see saved examples.
         {getAnthropicKey() && <> Set: <code>{maskKey(getAnthropicKey())}</code>.</>}
       </p>
 
@@ -73,9 +73,7 @@ Powers event research. From{' '}
         </div>
       </div>
       <p className="settings-hint">
-{MODELS.find((m) => m.id === model)?.note}. Sonnet handles the research fine; the
-        open question is rating who’s in the room. Test on ITB Berlin — the right answer is
-        travel 5, treasury 1.
+{MODELS.find((m) => m.id === model)?.note}.
       </p>
 
       <label className="fld fld-wide">
@@ -90,19 +88,13 @@ Powers event research. From{' '}
         />
       </label>
       <p className="settings-hint">
-Not needed — leads export as a HubSpot import file.
+Not needed - leads export as a HubSpot import file.
       </p>
 
       <div className="addconf-actions">
         <button className="cap-save" onClick={save}>{saved ? 'Saved' : 'Save keys'}</button>
       </div>
 
-      <p className="settings-note">
-<strong>Why you paste a key at all.</strong> No backend, so calls go straight from
-        your browser to Anthropic. An environment variable would be worse — Vite compiles
-        those into the shipped bundle. In production this would route through a server and a
-        rep would never see a key.
-      </p>
     </div>
   )
 }
